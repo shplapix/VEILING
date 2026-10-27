@@ -3,7 +3,7 @@ import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { Button } from "./components/ui/Button";
 import { Badge } from "./components/ui/Badge";
-import { ArrowDownRight, Clock, ShieldCheck, Flame } from "lucide-react";
+import { ArrowDownRight, Clock, ShieldCheck, TrendingDown } from "lucide-react";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
@@ -139,7 +139,7 @@ export const App: React.FC = () => {
                   </h3>
                   <div className="space-y-4 text-xs font-sans text-muted-steel">
                     <div className="flex items-start space-x-3">
-                      <Flame className="w-4 h-4 text-carbon-pitch flex-shrink-0 mt-0.5" />
+                      <TrendingDown className="w-4 h-4 text-carbon-pitch flex-shrink-0 mt-0.5" />
                       <p>
                         Ціна крокує вниз на 2 500 ₴ кожні 60 секунд до
                         досягнення підлоги ціни 90 000 ₴.
@@ -226,7 +226,7 @@ export const App: React.FC = () => {
                     <th className="p-4">Бренд / Сезон</th>
                     <th className="p-4">Час угоди</th>
                     <th className="p-4 text-right">Фінальна ціна</th>
-                    <th className="p-4 text-right">Зниження</th>
+                    <th className="p-4 text-right">Падіння</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline-border">

@@ -3,6 +3,7 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
@@ -28,4 +29,16 @@ repos:
         entry: uv run --directory backend pytest
         language: system
         types: [python]
+        pass_filenames: false
+
+      - id: eslint-frontend
+        name: eslint frontend
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+
+      - id: typecheck-frontend
+        name: typecheck frontend
+        entry: npm --prefix frontend run typecheck
+        language: system
         pass_filenames: false
