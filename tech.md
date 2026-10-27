@@ -1,126 +1,527 @@
-# Dutch Auction Archive — Core Technical Specification
-Version: 1.0.0
+# Технічне завдання: Платформа архівної моди «VEILING ■» (Dutch Auction Archive) — `tech.md`
 
-## 1. Overview
-The platform is a specialized marketplace for archival fashion (Helmut Lang, Raf Simons, Maison Martin Margiela, Undercover, Comme des Garcons, Yohji Yamamoto) powered by a Dutch Auction model.
-In this auction model, every lot starts at an initial peak price and drops at discrete, configurable intervals (ticks) until a buyer executes an immediate atomic purchase or the lot reaches its reserve (floor) price.
+**Версія**: 1.2.0  
+**Статус**: ЗАМОРОЖЕНО (FROZEN CORE ARCHITECTURE & BRANDBOOK SSOT)  
+**Changelog**:  
+- `v1.2.0`: Закріплено папку `instructions/brandbook/` як єдине непорушне **Джерело Правди (Single Source of Truth, SSOT)** для дизайну, дизайн-токенів, компонентів, візуальних референсів та Tone of Voice. Додано обов'язкову директиву для будь-яких викликів AI-агентів: кожен агент зобов'язаний звертатися до `instructions/brandbook/` перед проектуванням чи реалізацією фронтенду та UI/UX. Синхронізовано колірну палітру 60-30-10 (Gallery Canvas `#F4F5F8`, Carbon Black `#111112`, Pure White `#FFFFFF`, Signal Acid Lime `#D2F824`, Electric Cobalt Blue `#0052FF`, Hairline Gray `#E5E7EB`, Muted Steel Gray `#71717A`), типографіку (Plus Jakarta Sans + JetBrains Mono), фірмовий знак `VEILING ■`, безаккаунтну модель пошуку за кодом квитанції (`V-XXXX-XXXX-XXXX-XXXX`) та термінологічний словник (Take/Забрати, The Fall/Падіння ціни, Ceiling/Floor).
+- `v1.1.0`: Додано повну локалізацію платформи українською мовою (`uk-UA`), валюту UAH (₴) та європейський контекст, україномовні атрибути та термінологію архівної моди. Зафіксовано вимогу виключно якісного технічного завдання без передчасного виконання коду.  
+- `v1.0.0`: Початкове заморожене ядро архітектури: голландський аукціон, FastAPI, React, MinIO, Celery + Redis, PostgreSQL, повна відсутність коментарів у коді.
 
-## 2. Technical Stack
-- Backend: Python 3.12, uv, FastAPI, SQLAlchemy 2.0 (asyncio), asyncpg, Alembic, Pydantic v2, Pydantic-Settings
-- Background Worker: Celery, Celery Beat, Redis (Broker & Result Backend)
-- Real-Time Communication: FastAPI WebSockets + Redis Pub/Sub
-- Storage: MinIO (S3-compatible) with private/public bucket configuration
-- Database: PostgreSQL 16
-- Frontend: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, React Router, Lucide Icons
-- Quality & Standards: Ruff, Mypy (strict), Pytest, ESLint 9, Prettier, Pre-commit
-- Strict Rule: Zero comments throughout the entire codebase. Code must be self-documenting with strict static typing.
+---
 
-## 3. Data Schema & Contracts
+## 0. Сувора директива для всіх AI-агентів та розробників (Mandatory Agent Directive: SSOT Brandbook)
 
-### 3.1 Enumerations
-- LotStatus: `DRAFT`, `SCHEDULED`, `ACTIVE`, `SOLD`, `EXPIRED`, `CANCELLED`
-- LotCategory: `OUTERWEAR`, `TOPS`, `BOTTOMS`, `FOOTWEAR`, `ACCESSORIES`
-- OrderStatus: `PAID`, `FULFILLED`, `CANCELLED`
-- UserRole: `CUSTOMER`, `ADMIN`
+> [!IMPORTANT]
+> **НЕПОРУШНЕ ПРАВИЛО ВИКЛИКУ АГЕНТА**:  
+> При кожному зверненні до AI-агента (головного агента, subagent, асистента або розробника) при виконанні будь-яких завдань, пов'язаних з фронтендом, стилізацією, версткою, UI-компонентами, дизайн-токенами, користувацьким досвідом (UX) або текстами платформи, агент **ЗОБОВ'ЯЗАНИЙ** звертатися до папки `instructions/brandbook/` як до **ЄДИНОГО ДЖЕРЕЛА ПРАВДИ (Single Source of Truth, SSOT)** та брати дизайн, стилі, токени та ТЗ виключно звідти.
 
-### 3.2 Tables
+### 0.1 Обов'язковий протокол виконання робіт для агента:
+1. **Перший крок перед написанням фронтенд-коду**:
+   Агент зобов'язаний відкрити та дослідити матеріали в папці `instructions/brandbook/`:
+   - `instructions/brandbook/src/data/brandData.ts` — офіційні токени кольорів (`BRAND_COLORS`), типографічна шкала (`TYPE_SCALE`), словник та правила Tone of Voice (`VOICE_RULES`), опис екранів-референсів (`REFERENCE_IMAGES`).
+   - `instructions/brandbook/src/components/*` — інтерактивна бібліотека еталонних React-компонентів:
+     - `BrandManifesto.tsx` — філософія бренду, маніфест голландського аукціону, позиціонування.
+     - `ColorSystem.tsx` — правило розподілу поверхонь 60-30-10, WCAG контрасти.
+     - `LogoGuidelines.tsx` — анатомія логотипу `VEILING ■` (Plus Jakarta Sans, трекінг `0.35em`, лаймовий квадрат `#D2F824`).
+     - `TypographySpecimen.tsx` — правила застосування шрифтів Plus Jakarta Sans та JetBrains Mono.
+     - `ToneOfVoice.tsx` — словник термінів (дозволені vs суворо заборонені слова), FAQ.
+     - `UIComponentsShowcase.tsx` — жива картка аукціону, механізм фіксації чека, пошук квитанції за кодом.
+     - `AuctionSimulator.tsx` — симулятор дискретного спуску ціни.
+     - `TokensExportModal.tsx` — готові токени CSS variables та Tailwind CSS.
+     - `OriginalReferenceGallery.tsx` — галерея оригінальних макетів.
+   - `instructions/brandbook/public/assets/aistudio/*` — оригінальні дизайн-макети високої роздільної здатності (`1_efc20a3c.png`, `2_a0308e09.png`, скріншоти форми створення лота, підвалу, реєстру угод тощо).
+2. **Заборона самодіяльності**:
+   Суворо заборонено вигадувати довільні кольори (наприклад, випадкові відтінки темного або теплі вінтажні бежеві тони), довільні шрифти, радіуси заокруглення (у проєкті діє сувора дисципліна `rounded-none`, zero-pill) або формулювання кнопок. Будь-яке UI-рішення має мати пряме посилання на відповідний компонент чи токен з `instructions/brandbook/`.
+3. **Пріоритет брендбука**:
+   Якщо між загальним описом та деталями в `instructions/brandbook/` виникає будь-яке різночитання, пріоритет завжди має специфікація, зафіксована в `instructions/brandbook/`.
 
-#### `users`
-- `id`: UUID (Primary Key, default uuid4)
-- `email`: String (Unique, Indexed, Not Null)
-- `hashed_password`: String (Not Null)
-- `full_name`: String (Nullable)
-- `role`: Enum(UserRole) (Default: CUSTOMER, Not Null)
-- `is_active`: Boolean (Default: True, Not Null)
-- `created_at`: DateTime(timezone=True) (Server Default: now(), Not Null)
-- `updated_at`: DateTime(timezone=True) (Server Default: now(), onupdate: now(), Not Null)
+---
 
-#### `lots`
-- `id`: UUID (Primary Key, default uuid4)
-- `title`: String (Not Null, Indexed)
-- `brand`: String (Not Null, Indexed)
-- `designer`: String (Not Null)
-- `season`: String (Not Null)
-- `year`: Integer (Not Null, Indexed)
-- `collection_name`: String (Nullable)
-- `category`: Enum(LotCategory) (Not Null, Indexed)
-- `subcategory`: String (Not Null)
-- `tagged_size`: String (Not Null)
-- `fits_like`: String (Not Null)
-- `measurements`: JSONB (Not Null, schema: {pit_to_pit, length, shoulders, sleeve, waist, inseam, hem})
-- `materials`: JSONB (Not Null, schema: {outer, lining, hardware})
-- `condition_rating`: Integer (Not Null, 1-10)
-- `condition_details`: Text (Not Null)
-- `country_of_origin`: String (Not Null)
-- `provenance_notes`: Text (Nullable)
-- `start_price`: Numeric(12, 2) (Not Null)
-- `floor_price`: Numeric(12, 2) (Not Null)
-- `current_price`: Numeric(12, 2) (Not Null, Indexed)
-- `step_amount`: Numeric(12, 2) (Not Null)
-- `interval_seconds`: Integer (Not Null, default 60)
-- `status`: Enum(LotStatus) (Default: DRAFT, Not Null, Indexed)
-- `started_at`: DateTime(timezone=True) (Nullable)
-- `next_drop_at`: DateTime(timezone=True) (Nullable, Indexed)
-- `sold_at`: DateTime(timezone=True) (Nullable)
-- `sold_price`: Numeric(12, 2) (Nullable)
-- `winner_id`: UUID (ForeignKey("users.id"), Nullable)
-- `created_at`: DateTime(timezone=True) (Server Default: now(), Not Null)
-- `updated_at`: DateTime(timezone=True) (Server Default: now(), onupdate: now(), Not Null)
+## 1. Огляд проєкту та філософія бренду
 
-#### `lot_images`
-- `id`: UUID (Primary Key, default uuid4)
-- `lot_id`: UUID (ForeignKey("lots.id", ondelete="CASCADE"), Not Null, Indexed)
-- `image_url`: String (Not Null)
-- `sort_order`: Integer (Default: 0, Not Null)
-- `caption`: String (Nullable)
-- `created_at`: DateTime(timezone=True) (Server Default: now(), Not Null)
+### 1.1 Призначення та бренд-позиціонування
+**VEILING ■** (з нідерл. *Аукціон*, витоки: Амстердам, Нідерланди) — спеціалізований преміальний аукціонний дім культового архівного та подіумного дизайнерського одягу (Raf Simons 1997–2003, Helmut Lang 1997–2004, Maison Martin Margiela 1989–2009, Undercover 1996–2004, Rick Owens, Meiji textiles, Yohji Yamamoto, Comme des Garçons).
 
-#### `orders`
-- `id`: UUID (Primary Key, default uuid4)
-- `lot_id`: UUID (ForeignKey("lots.id"), Unique, Not Null)
-- `user_id`: UUID (ForeignKey("users.id"), Not Null, Indexed)
-- `final_price`: Numeric(12, 2) (Not Null)
-- `status`: Enum(OrderStatus) (Default: PAID, Not Null)
-- `shipping_address`: JSONB (Not Null, schema: {full_name, phone, address_line, city, postal_code, country})
-- `payment_reference`: String (Not Null)
-- `created_at`: DateTime(timezone=True) (Server Default: now(), Not Null)
+Кожна річ на платформі є унікальним раритетом в єдиному екземплярі (1-of-1) музейного рівня збереження з документальним підтвердженням походження (provenance).
 
-## 4. API Endpoints
+**Головний маніфест платформи**:  
+> **«The price only goes down.»**  
+> (Ціна рухається тільки вниз)  
+> *«A countdown you can watch, not an auction you can lose. There is one price at any moment, and it belongs to whoever takes it first. You are never outbid — you are only ever early or late.»*
 
-### 4.1 Authentication (`/api/v1/auth`)
-- `POST /register`: Request `{email, password, full_name}`, Response `{access_token, token_type, user}`
-- `POST /login`: Request `{username (email), password}`, Response `{access_token, token_type, user}`
-- `GET /me`: Header `Authorization: Bearer <token>`, Response `UserResponse`
+### 1.2 Мова інтерфейсу, валюта та локалізація
+- **Основна мова платформи**: Українська (`uk-UA`). Усі інтерфейсні тексти, описи характеристик, системні сповіщення, назви кнопок адаптуються українською мовою з суворим дотриманням словника Tone of Voice з `instructions/brandbook/`.
+- **Основна валюта**: Гривня (UAH / ₴) з можливістю відображення європейського еквівалента (EUR / €). Форматування моноширинним шрифтом за стандартом (наприклад: `145 000 ₴` або `€3.450`).
+- **Підтримка повнотекстового пошуку**: PostgreSQL індекси з підтримкою україномовних та англомовних найменувань брендів, сезонів, дизайнерів та описів речей.
 
-### 4.2 Lots (`/api/v1/lots`)
-- `GET /`: Query `{category, brand, status, search, limit, offset}`, Response `List[LotSummaryResponse]`
-- `GET /{id}`: Response `LotDetailResponse` with images and real-time auction status
-- `POST /{id}/buy`: Atomic lock `SELECT ... FOR UPDATE`, Request `{shipping_address}`, Response `OrderResponse`
+### 1.3 Механіка голландського аукціону (Continuous Dutch Descent)
+- Аукціон починається з максимальної стартової ціни — **Стелі ціни** (`start_price` / Ceiling Price).
+- Ціна автоматично знижується через фіксовані дискретні інтервали часу (`interval_seconds`, наприклад, кожні 60 секунд) на фіксований крок (`step_amount`).
+- Аукціон завершується в один із двох способів:
+  1. Перший покупець забирає річ («Забрати за поточну ціну» / «Take it at price»). Запит атомарно блокує рядок у базі через `SELECT FOR UPDATE`, переводить лот у статус `TAKEN` (`SOLD`), фіксує фінальну ціну угоди, формує замовлення та генерує криптографічний код квитанції. Усі інші конкурентні запити отримують відповідь `409 Conflict`.
+  2. Ціна опускається до мінімально допустимої резервної ціни — **Підлоги ціни** (`floor_price` / Floor Price). За досягнення підлоги ціна фіксується або лот переходить у статус `EXPIRED` (резерв вичерпано).
+- Зниження ціни виконується планувальником Celery Beat і транслюється в реальному часі на всі підключені клієнти через WebSocket та шину Redis Pub/Sub.
 
-### 4.3 Admin (`/api/v1/admin`)
-- Guard: Requires user with role `ADMIN` or admin credentials verification
-- `POST /lots`: Create new archive lot with full metadata
-- `POST /lots/{id}/images`: Upload multi-angle photos directly to MinIO
-- `POST /lots/{id}/start`: Activate auction and schedule drops
-- `POST /lots/{id}/cancel`: Cancel active lot
-- `GET /orders`: List all orders and winning buyers
-- `POST /seed`: Trigger database seeding with authentic archive lots and MinIO photos
+### 1.4 Безаккаунтна приватність (Frictionless Privacy & Claim Receipt System)
+Згідно з брендбуком `instructions/brandbook/`, на платформі реалізовано радикальну філософію поваги до приватності покупця:
+- Для здійснення покупки не потрібна складна реєстрація з паролями чи соціальними мережами.
+- Момент закріплення угоди генерує унікальний **Чек-код отримання (Receipt Claim Code)** формату `V-YYYY-XXXX-XXXX-XXXX` (наприклад: `V-2026-A8F2-9C1D-4E7B`).
+- Покупець у будь-який момент може ввести цей код у полі «Мої придбання / Пошук за квитанцією» (`/lookup`), щоб отримати доступ до деталей свого замовлення, адреси доставки, інвойсу та трекінгу.
 
-### 4.4 WebSockets (`/api/v1/ws`)
-- `WS /api/v1/ws/auctions`: Real-time duplex feed
-  - Event `PRICE_TICK`: `{type: "PRICE_TICK", lot_id: UUID, current_price: Decimal, next_drop_at: ISO8601}`
-  - Event `LOT_SOLD`: `{type: "LOT_SOLD", lot_id: UUID, winner_id: UUID, sold_price: Decimal}`
-  - Event `LOT_EXPIRED`: `{type: "LOT_EXPIRED", lot_id: UUID, final_price: Decimal}`
+---
 
-## 5. Background Tasks (Celery & Redis)
-- Periodic Task `process_auction_ticks`: Runs every 5 seconds.
-  Queries all lots with `status = ACTIVE` and `next_drop_at <= now()`.
-  Decrements `current_price = max(floor_price, current_price - step_amount)`.
-  If `current_price == floor_price`, transitions status to `EXPIRED` if configured, or holds at reserve.
-  Updates `next_drop_at = now() + interval_seconds`.
-  Publishes JSON payload to Redis channel `auction_events`.
+## 2. Повний стек технологій
 
-## 6. Slicing & Quality Guidelines
-- All code must pass `ruff check`, `ruff format --check`, `mypy --strict`, `pytest`, `eslint`, and `npm run typecheck`.
-- Absolute zero code comments in Python, TypeScript, and React components.
-- Conventional commits required on every slice and sub-slice: `type(slice-X.Y): description`.
+| Рівень системи | Технологія | Обґрунтування та призначення |
+| :--- | :--- | :--- |
+| **Мова та рантайм** | Python 3.12 | Базовий асинхронний рантайм бекенда |
+| **Менеджер пакетів** | `uv` | Ультрашвидкий детермінований менеджер залежностей нового покоління |
+| **Веб-фреймворк** | FastAPI 0.115+ | Асинхронний REST API та нативні WebSockets з автодокументацією OpenAPI |
+| **Валідація та контракти** | Pydantic v2 + Pydantic-Settings | Сувора валідація схем, типізація та читання конфігурацій з `.env` |
+| **ORM та драйвер БД** | SQLAlchemy 2.0 (asyncio) + asyncpg | Асинхронна робота з базою даних, типізовані моделі |
+| **Міграції бази даних** | Alembic 1.13+ | Версіоноване керування структурою PostgreSQL |
+| **Реляційна база даних** | PostgreSQL 16 (у Docker) | Збереження лотів, замовлень, JSONB-полів, блокування рядків `FOR UPDATE` |
+| **Брокер та кеш** | Redis 7 (у Docker) | Брокер для Celery, шина подій Pub/Sub для WebSocket-трансляцій |
+| **Черга фонових задач** | Celery 5.4+ (Worker + Beat) | Періодичне зниження цін за розкладом та перевірка таймерів |
+| **Файлове сховище фото** | MinIO (S3-сумісне, у Docker) | Зберігання важких оригінальних фотографій речей у високій якості |
+| **S3 клієнт** | `aioboto3` / `boto3` | Асинхронне завантаження, видалення, перевірка MIME-типів та формування URL |
+| **Безпека та авторизація** | PyJWT + Passlib (bcrypt) | JWT токени, хешування паролів, захист адмін-панелі та продавців |
+| **Лінтери та якість коду** | Ruff + mypy (strict) | Суворе дотримання стандартів PEP 8, 100% покриття типами, **0 коментарів у коді** |
+| **Тестування бекенда** | Pytest + pytest-asyncio | Контрактні тести, тести конкурентності (race condition), перевірка ідемпотентності |
+| **Фронтенд-фреймворк** | React 19 / 18 + TypeScript 5.5+ | Реактивний клієнтський інтерфейс магазину та кабінету продавця |
+| **Збирач фронтенда** | Vite 5+ | Швидка збірка, HMR, оптимізований бандлінг |
+| **Стилізація та дизайн** | Tailwind CSS 3.4+ | Повна конфігурація токенів з `instructions/brandbook/` (палітра 60-30-10, `rounded-none`, трекінг) |
+| **Типографіка** | Plus Jakarta Sans + JetBrains Mono | Два строгі шрифтові сімейства: нео-гротеск для заголовків та моноширинний для цін/таймерів |
+| **Серверний стан** | TanStack Query v5 (React Query) | Кешування запитів, оптимістичні оновлення, інвалідація даних |
+| **Маршрутизація** | React Router v6/v7 | Клієнтська навігація, сторінки каталогу, детального лота, пошуку чека та студії продавця |
+| **Іконки** | Lucide React | Мінімалістичний індустріальний набір векторних іконок |
+| **Лінтери фронтенда** | ESLint 9 + Prettier | Сувора перевірка синтаксису, відсутність коментарів, форматування |
+| **Git-хуки** | Pre-commit | Автоматична перевірка якості (лінти, типи, тести) перед кожним коммітом |
+
+---
+
+## 3. Архітектура та структура папок проєкту
+
+```
+.
+├── tech.md                     # Єдине заморожене ядро технічного завдання (v1.2.0)
+├── .env.example                # Шаблон конфігурацій та секретів
+├── .env                        # Секрети розробки (в .gitignore, не потрапляє на GitHub)
+├── .gitignore                  # Повний перелік виключень від будь-якого сміття
+├── .pre-commit-config.yaml     # Конфігурація Git pre-commit хуків
+├── docker-compose.yml          # Інфраструктура: Postgres, Redis, MinIO, Celery Worker, Celery Beat
+├── instructions/               # Закрита папка інструкцій та еталонних матеріалів (в .gitignore)
+│   ├── tech.md                 # Копія специфікації ТЗ
+│   └── brandbook/              # ЄДИНЕ ДЖЕРЕЛО ПРАВДИ ДИЗАЙНУ (SSOT Brandbook Application)
+│       ├── package.json        # Залежності додатку брендбука
+│       ├── public/
+│       │   └── assets/
+│       │       └── aistudio/   # Оригінальні UI-макети високої роздільної здатності (PNG)
+│       └── src/
+│           ├── types.ts        # TypeScript типи дизайн-системи
+│           ├── data/
+│           │   └── brandData.ts # Колірні токени, типографіка, словник Tone of Voice, референси
+│           └── components/     # Еталонні компоненти дизайн-системи
+│               ├── Header.tsx                 # Трьохзонний хедер сайту (VEILING ■, Nav, CTA)
+│               ├── BrandManifesto.tsx         # Маніфест бренду та порівняльна таблиця аукціонів
+│               ├── ColorSystem.tsx            # Палітра 60-30-10 та тестер контрастів
+│               ├── LogoGuidelines.tsx         # Анатомія знаку VEILING ■ та SVG коди
+│               ├── TypographySpecimen.tsx     # Зразки шрифтів Plus Jakarta Sans та JetBrains Mono
+│               ├── ToneOfVoice.tsx            # Правила мови (Preferred vs Forbidden) та FAQ
+│               ├── UIComponentsShowcase.tsx   # Жива картка лота, таймер падіння, пошук чека
+│               ├── AuctionSimulator.tsx       # Симулятор дискретного спуску ціни
+│               ├── TokensExportModal.tsx      # Експорт токенів у CSS / Tailwind / JSON
+│               └── OriginalReferenceGallery.tsx # Галерея оригінальних екранів-референсів
+├── backend/
+│   ├── pyproject.toml          # uv маніфест, налаштування ruff, mypy, pytest
+│   ├── uv.lock                 # Зафіксовані версії залежностей
+│   ├── alembic.ini             # Конфігурація міграцій
+│   ├── alembic/
+│   │   ├── env.py              # Асинхронний запуск міграцій
+│   │   └── versions/           # Версії міграцій
+│   ├── app/
+│   │   ├── main.py             # Точка входу FastAPI, CORS, роутери, WebSocket
+│   │   ├── core/
+│   │   │   ├── config.py       # Pydantic Settings з .env
+│   │   │   ├── database.py     # Асинхронний рушій SQLAlchemy та сесії
+│   │   │   ├── security.py     # Хешування, JWT токени, перевірка адміна/продавця
+│   │   │   └── s3.py           # Клієнт MinIO (upload, delete, get_url)
+│   │   ├── models/
+│   │   │   ├── user.py         # Модель користувача (Seller, Admin, Buyer)
+│   │   │   ├── lot.py          # Модель лота з повним набором архівних характеристик
+│   │   │   ├── lot_image.py    # Зв'язок лота з фотографіями в MinIO
+│   │   │   ├── price_tick.py   # Історія кожного кроку зниження ціни
+│   │   │   └── order.py        # Замовлення, фіксована ціна покупки та claim_code
+│   │   ├── schemas/
+│   │   │   ├── user.py         # Схеми автентифікації
+│   │   │   ├── lot.py          # Схеми створення лота, детального перегляду, фільтрів
+│   │   │   ├── order.py        # Схеми оформлення замовлення, claim_code та адреси
+│   │   │   └── ws.py           # Схеми подій WebSocket (PRICE_TICK, LOT_TAKEN, LOT_EXPIRED)
+│   │   ├── api/
+│   │   │   ├── deps.py         # Залежності: get_db, get_current_user, get_admin_user
+│   │   │   └── v1/
+│   │   │       ├── auth.py     # Автентифікація продавців та адмінів
+│   │   │       ├── lots.py     # Каталог, картка лота, атомарне взяття лота (Take)
+│   │   │       ├── orders.py   # Пошук замовлення за кодом квитанції (Claim Lookup)
+│   │   │       ├── admin.py    # Адмін-ендпоінти: створення лота, завантаження фото, сид
+│   │   │       └── ws.py       # WebSocket ендпоінт для прямої трансляції падіння цін
+│   │   ├── tasks/
+│   │   │   ├── celery_app.py   # Конфігурація інстансу Celery з Redis
+│   │   │   └── auction.py      # Періодична задача дискретного зниження цін
+│   │   └── scripts/
+│   │       └── seed.py         # Скрипт завантаження фото в MinIO та сиду бази раритетами
+│   └── tests/
+│       ├── conftest.py         # Тестові фікстури, тестова БД, фейковий S3
+│       ├── test_auth.py        # Тести безпеки та авторизації
+│       ├── test_lots.py        # Тести читання та фільтрації лотів
+│       ├── test_auction.py     # Тести конкурентної покупки SELECT FOR UPDATE (гонка кліків)
+│       └── test_tasks.py       # Тести ідемпотентності фонової задачі Celery
+└── frontend/
+    ├── package.json
+    ├── tsconfig.json
+    ├── vite.config.ts
+    ├── tailwind.config.ts      # Конфігурація токенів VEILING з instructions/brandbook/
+    ├── src/
+    │   ├── main.tsx            # Точка монтування React DOM
+    │   ├── App.tsx             # Головний компонент з провайдерами та роутером
+    │   ├── types/
+    │   │   └── index.ts        # TypeScript типи, синхронізовані з бекендом та брендбуком
+    │   ├── api/
+    │   │   ├── client.ts       # Налаштований Axios/fetch клієнт з інтерцепторами
+    │   │   ├── lots.ts
+    │   │   ├── orders.ts       # API пошуку за квитанцією (Lookup API)
+    │   │   └── admin.ts
+    │   ├── hooks/
+    │   │   ├── useAuth.ts
+    │   │   └── useAuctionWs.ts # Хук WebSocket з авто-перепідключенням
+    │   ├── components/
+    │   │   ├── layout/         # Header (з логотипом VEILING ■), Footer (Carbon Black), Container
+    │   │   ├── ui/             # Button (rounded-none), Badge (Acid Lime TAKEN), Card, Modal, Input
+    │   │   ├── auction/        # LiveAuctionCard, DutchPriceTicker, AuctionProgressBar, LedgerTable
+    │   │   └── lot/            # PhotoGallery з лупою, SpecsAccordion, DescentTimeline
+    │   └── pages/
+    │       ├── HomePage.tsx    # Каталог активних падаючих лотів ("Falling Now")
+    │       ├── LotDetailPage.tsx # Сторінка речі з живим тикером та кнопкою «Забрати за...»
+    │       ├── ClaimLookupPage.tsx # Пошук придбання за чек-кодом ("Find what you took")
+    │       ├── LedgerPage.tsx  # Публічний реєстр закритих угод ("Recently Taken")
+    │       └── seller/
+    │           ├── SellerStudioPage.tsx # Форма додавання раритету ("The piece" + "The descent")
+    │           └── SellerDashboard.tsx
+```
+
+---
+
+## 4. Схема бази даних (PostgreSQL)
+
+### 4.1 Перерахування (Enums)
+- `user_role`: `'CUSTOMER'`, `'SELLER'`, `'ADMIN'`
+- `lot_status`: `'DRAFT'`, `'SCHEDULED'`, `'ACTIVE'`, `'TAKEN'`, `'EXPIRED'`, `'CANCELLED'`
+- `lot_category`: `'OUTERWEAR'`, `'TOPS'`, `'BOTTOMS'`, `'FOOTWEAR'`, `'ACCESSORIES'`
+- `order_status`: `'PAID'`, `'FULFILLED'`, `'CANCELLED'`
+
+### 4.2 Таблиця `users` (Користувачі / Продавці / Адміністратори)
+- `id`: UUID, PRIMARY KEY (за замовчуванням `gen_random_uuid()`).
+- `email`: VARCHAR(255), UNIQUE, NOT NULL, INDEXED.
+- `hashed_password`: VARCHAR(255), NOT NULL.
+- `full_name`: VARCHAR(255), NULLABLE (ПІБ українською або латиницею).
+- `role`: user_role, NOT NULL, DEFAULT `'SELLER'`.
+- `is_active`: BOOLEAN, NOT NULL, DEFAULT TRUE.
+- `created_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+- `updated_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+
+### 4.3 Таблиця `lots` (Архівні лоти голландського аукціону)
+- `id`: UUID, PRIMARY KEY.
+- `title`: VARCHAR(255), NOT NULL, INDEXED (наприклад: *Бомбер Raf Simons AW01 "Riot! Riot! Riot!"*).
+- `brand`: VARCHAR(100), NOT NULL, INDEXED (*Raf Simons*).
+- `designer`: VARCHAR(100), NOT NULL (*Raf Simons*).
+- `season`: VARCHAR(50), NOT NULL (*Autumn/Winter*).
+- `year`: INTEGER, NOT NULL, INDEXED (*2001*).
+- `collection_name`: VARCHAR(150), NULLABLE (*"Riot! Riot! Riot!"*).
+- `category`: lot_category, NOT NULL, INDEXED (*OUTERWEAR*).
+- `subcategory`: VARCHAR(100), NOT NULL (наприклад: *Бомбер*, *Астро-куртка*, *В'язаний светр*).
+- `tagged_size`: VARCHAR(50), NOT NULL (Розмір на бірці, наприклад: *50*).
+- `fits_like`: VARCHAR(50), NOT NULL (Фактична посадка, наприклад: *Oversized L*).
+- `measurements`: JSONB, NOT NULL (Детальні заміри в сантиметрах: `pit_to_pit`, `length`, `shoulders`, `sleeve`, `waist`, `inseam`, `hem`).
+- `materials`: JSONB, NOT NULL (Склад матеріалів: `outer` — 100% бавовна, `lining` — 100% купро, `hardware` — блискавки Raccagni).
+- `condition_rating`: INTEGER, NOT NULL, CHECK (1..10) (Оцінка стану речі за 10-бальною шкалою).
+- `condition_details`: TEXT, NOT NULL (Опис вінтажної патини тканини, слідів часу або збереження архіву).
+- `country_of_origin`: VARCHAR(100), NOT NULL (Країна виробництва, наприклад: *Зроблено в Бельгії*).
+- `provenance_notes`: TEXT, NULLABLE (Походження речі, подіумний показ, оригінальні ярлики).
+- `seller_location`: VARCHAR(100), NOT NULL, DEFAULT `'Амстердам, Нідерланди'` (Місто відправки).
+- `shipping_notes`: TEXT, NOT NULL, DEFAULT `'Застрахована кур'єрська доставка по Європі та Україні (3–5 робочих днів)'`.
+- `start_price`: NUMERIC(12, 2), NOT NULL (Стеля ціни / Opening Ceiling Price, наприклад: `180000.00 ₴` / `€4.200`).
+- `floor_price`: NUMERIC(12, 2), NOT NULL (Підлога ціни / Floor Price, де спуск зупиняється).
+- `current_price`: NUMERIC(12, 2), NOT NULL, INDEXED (Поточна ціна в дану секунду).
+- `step_amount`: NUMERIC(12, 2), NOT NULL (Розмір одного дискретного кроку падіння ціни).
+- `interval_seconds`: INTEGER, NOT NULL, DEFAULT 60 (Інтервал між кроками в секундах).
+- `status`: lot_status, NOT NULL, DEFAULT `'DRAFT'`, INDEXED.
+- `started_at`: TIMESTAMPTZ, NULLABLE (Час початку падіння ціни).
+- `next_drop_at`: TIMESTAMPTZ, NULLABLE, INDEXED (Точний час наступного зниження ціни).
+- `taken_at`: TIMESTAMPTZ, NULLABLE (Точний час взяття лота покупцем).
+- `final_price`: NUMERIC(12, 2), NULLABLE (Фінальна ціна фіксації угоди).
+- `winner_id`: UUID, NULLABLE, REFERENCES `users(id)` (Покупець, якщо авторизований).
+- `created_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+- `updated_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+
+### 4.4 Таблиця `lot_images` (Фотографії в MinIO)
+- `id`: UUID, PRIMARY KEY.
+- `lot_id`: UUID, NOT NULL, REFERENCES `lots(id)` ON DELETE CASCADE, INDEXED.
+- `image_url`: VARCHAR(1024), NOT NULL (Пряме публічне посилання на файл у MinIO).
+- `sort_order`: INTEGER, NOT NULL, DEFAULT 0 (0 — головне фото на світлому фоні, далі ракурси швів, фурнітури та бірок).
+- `caption`: VARCHAR(255), NULLABLE (Підпис ракурсу: *Вигляд спереду*, *Автентична бирка з кодом сезону*).
+- `created_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+
+### 4.5 Таблиця `orders` (Замовлення та квитанції)
+- `id`: UUID, PRIMARY KEY.
+- `lot_id`: UUID, NOT NULL, UNIQUE, REFERENCES `lots(id)` (Сувора гарантія: 1 унікальний лот = 1 замовлення).
+- `user_id`: UUID, NULLABLE, REFERENCES `users(id)`, INDEXED.
+- `claim_code`: VARCHAR(64), NOT NULL, UNIQUE, INDEXED (Криптографічний код квитанції формату `V-YYYY-XXXX-XXXX-XXXX`).
+- `final_price`: NUMERIC(12, 2), NOT NULL (Фіксована ціна на момент натискання «Забрати»).
+- `savings_from_ceiling`: NUMERIC(12, 2), NOT NULL (Сума економії покупця від стартової стелі ціни).
+- `savings_percentage`: INTEGER, NOT NULL (Відсоток зниження, наприклад `-18%`).
+- `status`: order_status, NOT NULL, DEFAULT `'PAID'`.
+- `buyer_contact`: VARCHAR(255), NOT NULL (Email або номер телефону покупця).
+- `shipping_address`: JSONB, NOT NULL (ПІБ одержувача, населений пункт, поштовий індекс, адреса/відділення).
+- `payment_reference`: VARCHAR(255), NOT NULL (Ідентифікатор транзакції платіжного шлюзу).
+- `created_at`: TIMESTAMPTZ, NOT NULL, DEFAULT NOW().
+
+---
+
+## 5. Контракти черги Celery та шини подій Redis Pub/Sub
+
+### 5.1 Планувальник Celery Beat
+- **Періодичність**: Кожні 5.0 секунд.
+- **Задача**: `app.tasks.auction.process_auction_ticks`.
+- **Ідемпотентність та атомарність**:
+  Зниження ціни виконується єдиним SQL-виразом:
+  ```sql
+  UPDATE lots
+  SET current_price = GREATEST(floor_price, current_price - step_amount),
+      next_drop_at = NOW() + (interval_seconds * INTERVAL '1 second')
+  WHERE status = 'ACTIVE' AND next_drop_at <= NOW()
+  RETURNING id, current_price, floor_price, step_amount, next_drop_at;
+  ```
+  Це гарантує, що жоден паралельний запуск Celery не зможе знизити ціну двічі за один інтервал.
+
+### 5.2 Події шини Redis Pub/Sub (`auction_events`)
+Кожне оновлення лота публікується в канал `auction_events`, звідки FastAPI транслює повідомлення в активні вебсокети клієнтів:
+
+**1. Подія дискретного падіння ціни (`PRICE_TICK`):**
+```json
+{
+  "event": "PRICE_TICK",
+  "lot_id": "a50c8fd8-1b22-498c-8c90-ffb772c72b21",
+  "current_price": 145000.00,
+  "floor_price": 90000.00,
+  "step_amount": 2500.00,
+  "next_drop_at": "2026-10-24T18:05:00Z"
+}
+```
+
+**2. Подія закріплення покупки («Забрано») (`LOT_TAKEN`):**
+```json
+{
+  "event": "LOT_TAKEN",
+  "lot_id": "a50c8fd8-1b22-498c-8c90-ffb772c72b21",
+  "final_price": 132500.00,
+  "taken_at": "2026-10-24T18:02:14Z",
+  "savings_percentage": 26
+}
+```
+
+**3. Подія досягнення мінімального резерву (`LOT_EXPIRED`):**
+```json
+{
+  "event": "LOT_EXPIRED",
+  "lot_id": "a50c8fd8-1b22-498c-8c90-ffb772c72b21",
+  "floor_price": 90000.00,
+  "expired_at": "2026-10-24T18:15:00Z"
+}
+```
+
+---
+
+## 6. Механіка атомарного взяття лота (Take Action & Race Condition Protection)
+
+Оскільки раритетний архівний одяг існує в єдиному екземплярі, взяття лота захищене від паралельних кліків на рівні транзакції PostgreSQL:
+
+```
+[Покупець 1: Натиснув "Забрати"] ─────┐
+                                      ├──> [FastAPI POST /api/v1/lots/{id}/take]
+[Покупець 2: Натиснув через 2мс] ─────┘          │
+                                                 ▼
+                            [BEGIN TRANSACTION: SELECT * FROM lots WHERE id = :id FOR UPDATE]
+                                                 │
+                         ┌───────────────────────┴───────────────────────┐
+                         ▼                                               ▼
+            [Запит 1 захопив блокування]                     [Запит 2 чекає звільнення рядка]
+                         │                                               │
+               status == 'ACTIVE'? -> ТАК                                │
+               status = 'TAKEN'                                          │
+               Генерація claim_code (V-2026-XXXX-...)                    │
+               Створення Order -> COMMIT                                 │
+               Публікація LOT_TAKEN у Redis                              │
+               Відповідь: 200 OK {claim_code, order}                     │
+                         │                                               │
+                         └───────────────────────┬───────────────────────┘
+                                                 ▼
+                                    [Блокування перейшло до Запиту 2]
+                                                 │
+                                      status == 'ACTIVE'? -> НІ (Вже 'TAKEN')
+                                      ROLLBACK TRANSACTION
+                                      Відповідь: 409 Conflict ("Цю річ уже забрав інший покупець")
+```
+
+---
+
+## 7. Дизайн-система VEILING, токени та каталог базових UI-компонентів
+
+> [!IMPORTANT]
+> Джерело специфікації цього розділу — файли та компоненти в `instructions/brandbook/` (`src/data/brandData.ts`, `src/components/*`, `public/assets/aistudio/*`). Будь-яка реалізація у фронтенді повинна 100% відповідати цим токенам.
+
+### 7.1 Фірмовий знак (Brand Wordmark)
+- **Текстова частина**: `VEILING` у верхньому регістрі, шрифт `Plus Jakarta Sans`, ExtraBold (800), розріджений міжбуквений інтервал (`letter-spacing: 0.35em`).
+- **Символьний акцент**: Сигнальний лаймовий квадрат (`#D2F824`) розміром $12\times 12\text{ px}$ (або $16\times 16\text{ px}$ на дисплейному масштабі), розташований на базовій лінії відразу після назви бренду. Квадрат символізує дискретний квант часу голландських аукціонів та момент фіксації ціни.
+- **Повна текстова репрезентація**: `VEILING ■`.
+
+### 7.2 Хроматична архітектура (Правило 60-30-10)
+Колористика побудована за принципами голландського конструктивизму без теплих ретро-відтінків, штучних градієнтів чи візуального шуму:
+
+| Частка площі | Назва токена | HEX код | Призначення в інтерфейсі |
+| :--- | :--- | :--- | :--- |
+| **60%** Ambient Canvas | `gallery-canvas` | `#F4F5F8` | Світлий прохолодний фон усіх сторінок каталогу, галереї та перегляду лотів |
+| **30%** Structure & Cards | `carbon-pitch` | `#111112` | Контрастні темні секції ("FOR SELLERS"), глобальний футер, головні заголовки |
+| **30%** Surface | `pure-white` | `#FFFFFF` | Картки лотів, контейнери форм, модальні вікна, поля вводу |
+| **30%** Borders | `hairline-border` | `#E5E7EB` | Структурні тонкі рамки завтовшки 1px без тіней і розмиття |
+| **30%** Microcopy | `muted-steel` | `#71717A` | Другорядний текст, підписи таймерів, мітки кроків |
+| **10%** Action Signal | `electric-blue` | `#0052FF` | Головні кнопки дії («LIST AN ITEM», «ПОШУК КВИТАНЦІЇ»), виділене слово «down.» |
+| **10%** Brand Accent | `acid-lime` | `#D2F824` | Фірмовий квадрат знака (■), бейджі «TAKEN», кнопки в темному блоці для продавців |
+
+### 7.3 Типографічна система (Plus Jakarta Sans + JetBrains Mono)
+- **Основний гротеск (Primary Display & Body)**: `Plus Jakarta Sans`
+  - `Hero Display`: `clamp(2.75rem, 5vw, 4.25rem)`, вага 800 (Extra Bold), інтервал `-0.035em`, висота рядка `1.05`. Текст: *«The price only goes down.»* (слово *«down.»* виділене синім кольором `#0052FF`).
+  - `Section Headline`: вага 700 (Bold), інтервал `-0.025em`, висота рядка `1.12`. Текст: *«A countdown you can watch, not an auction you can lose.»*
+  - `Subsection Headline`: 24px (1.5rem), вага 700, інтервал `-0.02em`.
+  - `Data / Price Display`: 40px (2.5rem), вага 800 (Heavy Tabular), інтервал `-0.03em`.
+  - `Body Copy`: 16px (1rem), вага 400, висота рядка `1.6`.
+  - `Button / Navigation`: 12–14px, вага 700, верхній регістр, інтервал `0.08em`. Текст: «СПИСОК ЛОТІВ», «ШУКАТИ КВИТАНЦІЮ», «СТВОРИТИ ЛОТ».
+- **Моноширинний шрифт (Data & Monospace Kickers)**: `JetBrains Mono` / `ui-monospace`
+  - `Micro Monospace Kicker`: 12px (0.75rem), вага 500/600, верхній регістр, широкий інтервал `0.12em`. Приклад: `■ DUTCH AUCTION · THE PRICE FALLS ON A TIMER`.
+  - Індикатори кроків (01, 02, 03), таймери зворотного відліку (`00:42`), коди квитанцій (`V-2026-A8F2-9C1D-4E7B`), точні заміри речей у сантиметрах.
+- **Геометрія та відсутність скруглень (Anti-Pill Discipline)**:
+  Вся система підпорядкована суворому бруталізму: `--radius-veiling: 0px` (`rounded-none`). Жодних круглих кнопок-таблеток чи заокруглених карток.
+
+### 7.4 Словник термінології та Tone of Voice (з `instructions/brandbook/src/data/brandData.ts`)
+
+| Категорія | Обов'язкові терміни (Preferred) | Суворо заборонено (Forbidden) | Обґрунтування філософії |
+| :--- | :--- | :--- | :--- |
+| **Дія купівлі** | **Забрати / Забрано** (*«Take it at €10.979»*, *«Taken»*) | Купити зараз, Ставка, Переможець, Торги (*«Bid»*, *«Buy now»*, *«Won»*) | У голландському аукціоні покупці не змагаються ставками; вони миттєво хапають річ за поточну ціну. |
+| **Рух ціни** | **Падіння ціни / Спуск** (*«The fall»*, *«Descends»*, *«The price only goes down»*) | Знижка, Сейл, Ліквідація, Розпродаж (*«Discount»*, *«Sale»*, *«Clearance»*) | VEILING — це дім архівної високої моди. Падіння відображає пошук справжньої ринкової ціни, а не дешевий стік. |
+| **Межі цін** | **Стеля ціни та Підлога ціни** (*Ceiling Price* & *Floor Price*) | Стартова ставка, Резерв аукціону, Мінімальна ставка (*Starting bid*, *Reserve price*) | Аукціон відкривається на максимумі (потолок) і спускається до зафіксованої межі зупинки (підлога). |
+| **Доступ до покупки** | **Чек-код отримання / Квитанція** (*Claim Code: `V-XXXX-XXXX-...`*) | Обов'язковий акаунт, Пароль, Реєстрація (*User Account*, *Password*, *Register*) | Радикальна приватність: «Тут немає обов'язкових акаунтів. Введіть код із квитанції, щоб знайти ваше замовлення». |
+| **Тональність** | Сухий, прямий, лаконічний нідерландський бруталізм | Штучний маркетинг, FOMO, емодзі вогню (*«Поспішай! Останній шанс! 🔥»*) | Напруга створюється самим таймером та публічним падінням цифр, без дешевого тиску на покупця. |
+| **Контекст речей** | Архівна мода, Сезон / Ера, Провенанс (*Archive fashion*, *Season / Era*, *Provenance*) | Секонд-хенд, Вживаний одяг, Барахолка (*Used clothes*, *Secondhand*, *Thrifted*) | Позиціонування виключно як унікальні предмети дизайну музейного рівня. |
+
+### 7.5 Специфікація ключових екранів за макетами з `instructions/brandbook/public/assets/aistudio/`
+1. **Трьохзонний хедер (Top Bar Contract — референс `ref-hero-full`):**
+   - Ліва зона: Фірмовий знак `VEILING ■` (трекінг `0.35em`, лаймовий квадрат).
+   - Центральна зона: Навігація у верхньому регістрі тонким гротеском («ПАДАЄ ЗАРАЗ», «ЯК ЦЕ ПРАЦЮЄ», «ПУБЛІЧНИЙ РЕЄСТР», «ПОШУК КВИТАНЦІЇ»).
+   - Права зона: Головна синя кнопка дії `#0052FF` («СТВОРИТИ ЛОТ» / «LIST AN ITEM»).
+2. **Головний екран (Hero Section — референси `ref-hero-1`, `ref-hero-alt`):**
+   - Монументальний заголовок *«The price only goes down.»* із синім акцентним словом *«down.»*.
+   - Статусний мікро-кікер у верхньому регістрі з моноширинним індикатором таймера.
+   - Жива картка лота (Live Falling Auction Card) з великими моноширинними цифрами ціни, прогрес-баром спуску, бейджем `TAKEN` (якщо лот закріплено) та розрахунком економії.
+3. **Блок механіки (How It Works — референс `ref-steps`):**
+   - Двоколонковий блок із моноширинною нумерацією етапів (01, 02, 03) та тонкими роздільними лініями `1px`:
+     - `01 / СТЕЛЯ ЦІНИ`: Аукціон відкривається на піку вартості раритету.
+     - `02 / СПУСК ПО ТАЙМЕРУ`: Кожну хвилину ціна крокує вниз до підлоги.
+     - `03 / ЗАБРАТИ В МОМЕНТ`: Перший, хто натисне «Забрати», фіксує річ назавжди.
+4. **Публічний реєстр закритих угод (Recently Taken — референс `ref-ledger`):**
+   - Таблиця реальної прозорості: квадратна мініатюра речі, назва, сезон, точний час закриття угоди моноширинним шрифтом, фінальна ціна та шильдик відсотка падіння (наприклад: `-16%`, `-24%`).
+5. **Контрастний блок для продавців (For Sellers Pitch — референс `ref-sellers-banner`):**
+   - Глибоке чорне тло `#111112`, лаймовий кікер `#D2F824` `«ДЛЯ ВЛАСНИКІВ АРХІВУ»`, заголовок *«Маєте раритет, вартий красивого падіння?»* та яскраво-лаймова прямокутна кнопка `#D2F824` з чорним текстом.
+6. **Пошук квитанції без акаунтів (Claim Lookup — референс `ref-purchases`):**
+   - Екран перегляду придбань: заголовок *«Знайдіть те, що ви забрали. Тут немає акаунтів.»*, поле моноширинного вводу формату `V-XXXX-XXXX-XXXX-XXXX` та кнопка пошуку.
+7. **Студія створення лота продавцем (Seller Studio — референси `ref-listing-1`, `ref-listing-2`, `ref-listing-3`):**
+   - Двоколонкова архітектура:
+     - Ліва колонка: «Параметри експонату» (назва, бренд, рік, сезон, точні заміри у см, склад тканин, фотографії).
+     - Права колонка: «Параметри падіння» (Стеля ціни, Підлога зупинки, сума кроку падіння, інтервал у секундах, живий попередній перегляд графіка спуску ціни).
+
+---
+
+## 8. Стратегія тестування (Testing Strategy)
+
+1. **Контрактні тести API**: перевірка структури відповідей усіх ендпоінтів Pydantic-схемами (включаючи `claim_code`, розрахунок економії та події WebSocket).
+2. **Тести конкурентності (Race Condition)**:
+   - Запуск 20 одночасних асинхронних запитів `POST /api/v1/lots/{id}/take` через `asyncio.gather`.
+   - Рівно 1 запит отримує `200 OK` зі згенерованим `claim_code`.
+   - Рівно 19 запитів отримують `409 Conflict`.
+   - У БД гарантовано існує лише 1 запис замовлення для цього лота.
+3. **Тест ідемпотентності фонової задачі Celery**:
+   - Двократний виклик `process_auction_ticks` в одну й ту ж мілісекунду.
+   - Ціна знижується рівно на один крок, `next_drop_at` зсувається на `interval_seconds`.
+4. **Тест безаккаунтного пошуку квитанції**:
+   - Запит `GET /api/v1/orders/lookup?code=V-2026-...` повертає повну інформацію про замовлення без вимоги JWT-авторизації покупця.
+5. **Автоматична перевірка відсутності коментарів**:
+   - Тест перевіряє всю кодову базу бекенда і фронтенда на повну відсутність коментарів (`#`, `//`, `/* */`), гарантуючи абсолютну чистоту і самодокументованість коду.
+
+---
+
+## 9. Правила коду та Definition of Done (DoD)
+
+1. **Обов'язкова відповідність брендбуку**: Будь-який компонент або сторінка фронтенду повинна використовувати виключно офіційні кольорові токени, шрифти та геометрію `rounded-none` з `instructions/brandbook/`.
+2. **Сувора заборона коментарів**: Жодного коментаря чи заглушки в усьому коді. Код має бути абсолютно чистим, самодокументованим, з вичерпною статичною типізацією.
+3. **Лінтери та перевірка типів**:
+   - Бекенд: `ruff check .` та `ruff format --check .` проходять з нулем зауважень.
+   - Типізація бекенда: `mypy --strict app` проходить зі 100% успіхом.
+   - Фронтенд: `eslint .` та `npm run typecheck` проходять із зеленим статусом.
+4. **Pre-commit хуки**: заборонено пушити будь-який комміт без успішного локального виконання лінтерів і тестів.
+5. **Конвенція коммітів**:
+   - Формат Conventional Commits з префіксом вертикального слайса:
+     `type(slice-X.Y): description in english`
+   - Логічні акуратні комміти після кожного підслайсу.
+
+---
+
+## 10. Дорожня карта реалізації по вертикальних слайсах
+
+- **Слайс 0: Інфраструктура, оточення та дизайн-система VEILING**
+  - Підслайс 0.1: Git репозиторій, вичерпний `.gitignore`, `.env.example`, робочий `.env`, заморожене ТЗ `tech.md`.
+  - Підслайс 0.2: Інтерактивний брендбук у папці `instructions/brandbook/` як непорушне джерело правди (токени, компоненти, референси).
+  - Підслайс 0.3: `docker-compose.yml` (Postgres 16, Redis 7, MinIO з авто-створенням публічного бакета, Celery Worker/Beat).
+  - Підслайс 0.4: Ініціалізація бекенда через `uv`, `pyproject.toml`, лінтери Ruff, mypy (strict), налаштування pre-commit хуків.
+  - Підслайс 0.5: Ініціалізація фронтенда на Vite + React + TypeScript + Tailwind CSS, конфігурація токенів VEILING (палітра 60-30-10, `Plus Jakarta Sans`, `JetBrains Mono`, `rounded-none`).
+
+- **Слайс 1: Ядро бекенда, база даних PostgreSQL та сховище MinIO**
+  - Підслайс 1.1: Асинхронне підключення SQLAlchemy 2.0, базова модель, налаштування міграцій Alembic.
+  - Підслайс 1.2: Реляційні моделі `User`, `Lot`, `LotImage`, `Order` з полями `claim_code`, замірами у JSONB та енумами.
+  - Підслайс 1.3: S3/MinIO асинхронний клієнт: завантаження фото, генерація UUID, перевірка MIME-типів та формування публічних URL.
+  - Підслайс 1.4: Модуль автентифікації для адмінів та продавців (JWT токени, bcrypt).
+  - Підслайс 1.5: Юніт-тести ядра бази даних та S3-клієнта.
+
+- **Слайс 2: Двигун голландського аукціону (Celery Beat + WebSockets)**
+  - Підслайс 2.1: Конфігурація Celery Worker та Celery Beat з брокером Redis.
+  - Підслайс 2.2: Періодична задача дискретного падіння цін `process_auction_ticks` з перевіркою підлоги ціни.
+  - Підслайс 2.3: WebSocket сервер FastAPI + Redis Pub/Sub трансляція подій (`PRICE_TICK`, `LOT_TAKEN`, `LOT_EXPIRED`).
+  - Підслайс 2.4: Атомарна транзакція взяття лота `POST /api/v1/lots/{id}/take` з блокуванням `SELECT FOR UPDATE` та генерацією квитанції `claim_code`.
+  - Підслайс 2.5: Тести паралельної гонки запитів (20 конкурентних запитів) та ідемпотентності таймера.
+
+- **Слайс 3: Студія продавця та керування архівними лотами**
+  - Підслайс 3.1: REST API для створення лота з двоколонковою специфікацією («Експонат» + «Спуск») та завантаженням фото в MinIO.
+  - Підслайс 3.2: Двоколонковий React UI студії продавця: метадані, заміри, налаштування таймера та кроку падіння ціни за макетом `ref-listing-1`.
+  - Підслайс 3.3: Тести доступу та валідації ендпоінтів створення лота.
+
+- **Слайс 4: Реалістичний сид культової архівної моди**
+  - Підслайс 4.1: Скрипт сиду з культовими експонатами (Raf Simons Riot Bomber AW01, Helmut Lang Astro Jacket AW99, Margiela Artisanal, Undercover).
+  - Підслайс 4.2: Автоматичне завантаження якісних оригінальних фотографій у MinIO з детальними ракурсами тканини, швів та бірок.
+  - Підслайс 4.3: Наповнення бази точними україномовними описами, реальними замірами в сантиметрах та автентичним провенансом.
+
+- **Слайс 5: Клієнтський інтерфейс VEILING**
+  - Підслайс 5.1: Трьохзонний хедер сайту (VEILING ■, навігація, CTA «СТВОРИТИ ЛОТ») та каталог активних падаючих лотів ("Falling Now").
+  - Підслайс 5.2: Сторінка лота: галерея фотографій з лупою, моноширинний тикер ціни, лінійний прогрес-бар та кнопка «Забрати за [ціна]».
+  - Підслайс 5.3: Миттєве атомарне взяття лота, відображення успішного екрана з чек-кодом квитанції (`V-2026-XXXX-...`) та переведення картки в статус `TAKEN`.
+  - Підслайс 5.4: Екран безаккаунтного пошуку замовлення за чек-кодом (`/lookup`) та публічний реєстр закритих угод (`/ledger`).
+
+- **Слайс 6: Фіналізація, контроль якості та верифікація**
+  - Підслайс 6.1: Повний прогін усіх лінтерів (`ruff`, `mypy`, `eslint`), запуск тестового комплекту та сувора перевірка відсутності коментарів.
+  - Підслайс 6.2: Скрізний інтеграційний E2E сценарій: старт спуску лота -> зміна ціни у реальному часі через WebSocket -> атомарне взяття лота -> перевірка квитанції через Lookup.
