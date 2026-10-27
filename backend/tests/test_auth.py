@@ -3,7 +3,9 @@ from datetime import timedelta
 import jwt
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import (
     create_access_token,
     decode_access_token,
@@ -11,6 +13,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.enums import UserRole
+from app.models.user import User
 
 
 def test_password_hashing() -> None:
@@ -35,6 +38,24 @@ def test_expired_token_raises_error() -> None:
     token = create_access_token(data=data, expires_delta=timedelta(seconds=-1))
     with pytest.raises(jwt.PyJWTError):
         decode_access_token(token)
+
+
+def test_token_missing_required_claims_raises_error() -> None:
+    raw_token_no_exp = jwt.encode(
+        {"sub": "test-user"},
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+    with pytest.raises(jwt.PyJWTError):
+        decode_access_token(raw_token_no_exp)
+
+    raw_token_no_sub = jwt.encode(
+        {"exp": 9999999999},
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+    with pytest.raises(jwt.PyJWTError):
+        decode_access_token(raw_token_no_sub)
 
 
 async def test_auth_register_and_login_flow(client: AsyncClient) -> None:
@@ -89,6 +110,86 @@ async def test_auth_register_and_login_flow(client: AsyncClient) -> None:
         headers={"Authorization": "Bearer invalid.jwt.token"},
     )
     assert invalid_me.status_code == 401
+
+
+async def test_admin_registration_forbidden(client: AsyncClient) -> None:
+    admin_payload = {
+        "email": "attacker@evil.com",
+        "password": "EvilPassword123!",
+        "role": "ADMIN",
+    }
+    response = await client.post("/api/v1/auth/register", json=admin_payload)
+    assert response.status_code in (422, 403)
+
+
+async def test_email_case_insensitivity_in_auth(client: AsyncClient) -> None:
+    payload = {
+        "email": "CaseCurator@Antwerp.be",
+        "password": "ValidPassword123!",
+        "role": "SELLER",
+    }
+    reg = await client.post("/api/v1/auth/register", json=payload)
+    assert reg.status_code == 201
+
+    login_lower = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "casecurator@antwerp.be", "password": "ValidPassword123!"},
+    )
+    assert login_lower.status_code == 200
+
+    login_upper = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "CASECURATOR@ANTWERP.BE", "password": "ValidPassword123!"},
+    )
+    assert login_upper.status_code == 200
+
+
+async def test_inactive_user_auth_rejected(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    inactive_user = User(
+        email="blocked@veiling.com",
+        hashed_password=get_password_hash("Password123!"),
+        role=UserRole.SELLER,
+        is_active=False,
+    )
+    db_session.add(inactive_user)
+    await db_session.commit()
+    await db_session.refresh(inactive_user)
+
+    login_resp = await client.post(
+        "/api/v1/auth/login",
+        json={"email": "blocked@veiling.com", "password": "Password123!"},
+    )
+    assert login_resp.status_code == 403
+    assert login_resp.json()["detail"] == "Account is inactive"
+
+    valid_token = create_access_token(data={"sub": str(inactive_user.id)})
+    me_resp = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {valid_token}"},
+    )
+    assert me_resp.status_code == 403
+    assert me_resp.json()["detail"] == "Inactive user"
+
+
+async def test_password_length_validation(client: AsyncClient) -> None:
+    short_pass = {
+        "email": "short@veiling.com",
+        "password": "short",
+        "role": "SELLER",
+    }
+    resp_short = await client.post("/api/v1/auth/register", json=short_pass)
+    assert resp_short.status_code == 422
+
+    long_pass = {
+        "email": "long@veiling.com",
+        "password": "A" * 73,
+        "role": "SELLER",
+    }
+    resp_long = await client.post("/api/v1/auth/register", json=long_pass)
+    assert resp_long.status_code == 422
 
 
 async def test_role_dependencies() -> None:

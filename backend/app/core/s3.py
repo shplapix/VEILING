@@ -8,6 +8,7 @@ from app.core.config import settings
 
 ALLOWED_IMAGE_TYPES: dict[str, str] = {
     "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
 }
@@ -53,11 +54,11 @@ class S3Service:
         return f"{base}/{clean_key}"
 
     def validate_content_type(self, content_type: str) -> str:
-        normalized = content_type.lower().strip()
-        if normalized not in ALLOWED_IMAGE_TYPES:
-            allowed = ", ".join(ALLOWED_IMAGE_TYPES.keys())
+        clean_type = content_type.split(";")[0].lower().strip()
+        if clean_type not in ALLOWED_IMAGE_TYPES:
+            allowed = ", ".join(sorted(ALLOWED_IMAGE_TYPES.keys()))
             raise ValueError(f"Invalid image type '{content_type}'. Allowed MIME types: {allowed}")
-        return ALLOWED_IMAGE_TYPES[normalized]
+        return ALLOWED_IMAGE_TYPES[clean_type]
 
     async def ensure_bucket_exists(self) -> None:
         async with self._get_client_context() as client:

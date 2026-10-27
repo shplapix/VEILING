@@ -1,8 +1,12 @@
 import uuid
 from collections.abc import AsyncIterator
+from typing import Any
 
 import pytest
+from botocore.exceptions import ClientError
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -19,6 +23,13 @@ from app.main import app
 _ = models
 
 
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
 class FakeS3Service:
     def __init__(self) -> None:
         self.storage: dict[str, tuple[bytes, str]] = {}
@@ -30,10 +41,10 @@ class FakeS3Service:
         return f"{base}/{clean_key}"
 
     def validate_content_type(self, content_type: str) -> str:
-        normalized = content_type.lower().strip()
-        if normalized not in ALLOWED_IMAGE_TYPES:
+        clean_type = content_type.split(";")[0].lower().strip()
+        if clean_type not in ALLOWED_IMAGE_TYPES:
             raise ValueError(f"Invalid image type '{content_type}'")
-        return ALLOWED_IMAGE_TYPES[normalized]
+        return ALLOWED_IMAGE_TYPES[clean_type]
 
     async def ensure_bucket_exists(self) -> None:
         pass
@@ -56,7 +67,10 @@ class FakeS3Service:
 
     async def get_image(self, key: str) -> tuple[bytes, str]:
         if key not in self.storage:
-            raise KeyError(f"Key {key} not found")
+            raise ClientError(
+                {"Error": {"Code": "NoSuchKey", "Message": f"Key {key} not found"}},
+                "GetObject",
+            )
         return self.storage[key]
 
 

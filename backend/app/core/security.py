@@ -41,5 +41,6 @@ def decode_access_token(token: str) -> dict[str, Any]:
         token,
         settings.SECRET_KEY,
         algorithms=[settings.ALGORITHM],
+        options={"require": ["exp", "sub"]},
     )
     return payload

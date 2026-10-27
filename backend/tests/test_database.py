@@ -279,3 +279,235 @@ async def test_order_creation_and_single_order_per_lot_constraint(
     with pytest.raises(IntegrityError):
         await db_session.commit()
     await db_session.rollback()
+
+
+async def test_lot_condition_rating_bounds(db_session: AsyncSession) -> None:
+    lot_invalid_low = Lot(
+        title="Invalid Rating Low",
+        brand="Raf Simons",
+        designer="Raf Simons",
+        season="AW01",
+        year=2001,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Bomber",
+        tagged_size="50",
+        fits_like="L",
+        measurements={},
+        materials={},
+        condition_rating=0,
+        condition_details="Invalid rating 0",
+        country_of_origin="Belgium",
+        start_price=Decimal("100000.00"),
+        floor_price=Decimal("50000.00"),
+        current_price=Decimal("100000.00"),
+        step_amount=Decimal("1000.00"),
+    )
+    db_session.add(lot_invalid_low)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+
+    lot_invalid_high = Lot(
+        title="Invalid Rating High",
+        brand="Raf Simons",
+        designer="Raf Simons",
+        season="AW01",
+        year=2001,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Bomber",
+        tagged_size="50",
+        fits_like="L",
+        measurements={},
+        materials={},
+        condition_rating=11,
+        condition_details="Invalid rating 11",
+        country_of_origin="Belgium",
+        start_price=Decimal("100000.00"),
+        floor_price=Decimal("50000.00"),
+        current_price=Decimal("100000.00"),
+        step_amount=Decimal("1000.00"),
+    )
+    db_session.add(lot_invalid_high)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+
+
+async def test_lot_pricing_constraints(db_session: AsyncSession) -> None:
+    inverted_lot = Lot(
+        title="Inverted Prices",
+        brand="Helmut Lang",
+        designer="Helmut Lang",
+        season="AW99",
+        year=1999,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Parka",
+        tagged_size="48",
+        fits_like="M",
+        measurements={},
+        materials={},
+        condition_rating=8,
+        condition_details="Vintage",
+        country_of_origin="Italy",
+        start_price=Decimal("50000.00"),
+        floor_price=Decimal("80000.00"),
+        current_price=Decimal("50000.00"),
+        step_amount=Decimal("1000.00"),
+    )
+    db_session.add(inverted_lot)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+
+    zero_step_lot = Lot(
+        title="Zero Step",
+        brand="Helmut Lang",
+        designer="Helmut Lang",
+        season="AW99",
+        year=1999,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Parka",
+        tagged_size="48",
+        fits_like="M",
+        measurements={},
+        materials={},
+        condition_rating=8,
+        condition_details="Vintage",
+        country_of_origin="Italy",
+        start_price=Decimal("80000.00"),
+        floor_price=Decimal("50000.00"),
+        current_price=Decimal("80000.00"),
+        step_amount=Decimal("0.00"),
+    )
+    db_session.add(zero_step_lot)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+
+
+async def test_lot_image_invalid_foreign_key_rejected(
+    db_session: AsyncSession,
+) -> None:
+    img = LotImage(
+        lot_id=uuid.uuid4(),
+        image_url="http://localhost:9000/archive-lots/orphan.jpg",
+    )
+    db_session.add(img)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()
+
+
+async def test_price_ticks_cascade_delete(db_session: AsyncSession) -> None:
+    lot = Lot(
+        title="Margiela Artisanal Vest",
+        brand="Maison Martin Margiela",
+        designer="Martin Margiela",
+        season="SS00",
+        year=2000,
+        category=LotCategory.TOPS,
+        subcategory="Vest",
+        tagged_size="M",
+        fits_like="M",
+        measurements={},
+        materials={},
+        condition_rating=9,
+        condition_details="Pristine",
+        country_of_origin="France",
+        start_price=Decimal("100000.00"),
+        floor_price=Decimal("60000.00"),
+        current_price=Decimal("100000.00"),
+        step_amount=Decimal("2000.00"),
+        status=LotStatus.ACTIVE,
+    )
+    db_session.add(lot)
+    await db_session.commit()
+
+    lot_id = lot.id
+    tick = PriceTick(lot_id=lot_id, price=Decimal("98000.00"))
+    db_session.add(tick)
+    await db_session.commit()
+
+    await db_session.delete(lot)
+    await db_session.commit()
+
+    res = await db_session.execute(select(PriceTick).where(PriceTick.lot_id == lot_id))
+    assert len(res.scalars().all()) == 0
+
+
+async def test_order_claim_code_unique_constraint(
+    db_session: AsyncSession,
+) -> None:
+    lot1 = Lot(
+        title="Lot One",
+        brand="Undercover",
+        designer="Jun Takahashi",
+        season="AW02",
+        year=2002,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Jacket",
+        tagged_size="L",
+        fits_like="L",
+        measurements={},
+        materials={},
+        condition_rating=8,
+        condition_details="Good",
+        country_of_origin="Japan",
+        start_price=Decimal("60000.00"),
+        floor_price=Decimal("30000.00"),
+        current_price=Decimal("45000.00"),
+        step_amount=Decimal("1000.00"),
+    )
+    lot2 = Lot(
+        title="Lot Two",
+        brand="Undercover",
+        designer="Jun Takahashi",
+        season="AW02",
+        year=2002,
+        category=LotCategory.OUTERWEAR,
+        subcategory="Jacket",
+        tagged_size="L",
+        fits_like="L",
+        measurements={},
+        materials={},
+        condition_rating=8,
+        condition_details="Good",
+        country_of_origin="Japan",
+        start_price=Decimal("60000.00"),
+        floor_price=Decimal("30000.00"),
+        current_price=Decimal("45000.00"),
+        step_amount=Decimal("1000.00"),
+    )
+    db_session.add_all([lot1, lot2])
+    await db_session.commit()
+
+    shared_claim_code = generate_claim_code()
+    order1 = Order(
+        lot_id=lot1.id,
+        claim_code=shared_claim_code,
+        final_price=Decimal("45000.00"),
+        savings_from_ceiling=Decimal("15000.00"),
+        savings_percentage=25,
+        status=OrderStatus.PAID,
+        buyer_contact="first@veiling.com",
+        shipping_address={"city": "Kyiv"},
+        payment_reference="ref1",
+    )
+    order2 = Order(
+        lot_id=lot2.id,
+        claim_code=shared_claim_code,
+        final_price=Decimal("45000.00"),
+        savings_from_ceiling=Decimal("15000.00"),
+        savings_percentage=25,
+        status=OrderStatus.PAID,
+        buyer_contact="second@veiling.com",
+        shipping_address={"city": "Lviv"},
+        payment_reference="ref2",
+    )
+    db_session.add(order1)
+    await db_session.commit()
+
+    db_session.add(order2)
+    with pytest.raises(IntegrityError):
+        await db_session.commit()
+    await db_session.rollback()

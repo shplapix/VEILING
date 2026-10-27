@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_user, get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
+from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserRead
 
@@ -21,7 +22,14 @@ async def register(
     user_in: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
-    existing_user_query = select(User).where(User.email == user_in.email)
+    if user_in.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Direct registration as ADMIN is not permitted",
+        )
+
+    normalized_email = user_in.email.lower().strip()
+    existing_user_query = select(User).where(User.email == normalized_email)
     existing_user_result = await db.execute(existing_user_query)
     if existing_user_result.scalar_one_or_none() is not None:
         raise HTTPException(
@@ -30,7 +38,7 @@ async def register(
         )
 
     user = User(
-        email=user_in.email,
+        email=normalized_email,
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
         role=user_in.role,
@@ -58,7 +66,8 @@ async def login(
     login_data: UserLogin,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
-    query = select(User).where(User.email == login_data.email)
+    normalized_email = login_data.email.lower().strip()
+    query = select(User).where(User.email == normalized_email)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
 

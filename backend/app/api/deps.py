@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.enums import UserRole
 from app.models.user import User
+from app.schemas.user import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login",
@@ -41,10 +42,10 @@ async def get_current_user(
 
     try:
         payload = decode_access_token(token)
-        user_id_str: str | None = payload.get("sub")
-        if not user_id_str:
+        token_data = TokenPayload.model_validate(payload)
+        if not token_data.sub:
             raise credentials_exception
-        user_id = uuid.UUID(user_id_str)
+        user_id = uuid.UUID(token_data.sub)
     except (jwt.PyJWTError, ValueError):
         raise credentials_exception from None
 

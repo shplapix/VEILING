@@ -47,7 +47,12 @@ def upgrade() -> None:
 
     op.create_table(
         "users",
-        sa.Column("id", uuid_type, primary_key=True),
+        sa.Column(
+            "id",
+            uuid_type,
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("email", sa.String(length=255), nullable=False),
         sa.Column("hashed_password", sa.String(length=255), nullable=False),
         sa.Column("full_name", sa.String(length=255), nullable=True),
@@ -70,7 +75,12 @@ def upgrade() -> None:
 
     op.create_table(
         "lots",
-        sa.Column("id", uuid_type, primary_key=True),
+        sa.Column(
+            "id",
+            uuid_type,
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("brand", sa.String(length=100), nullable=False),
         sa.Column("designer", sa.String(length=100), nullable=False),
@@ -128,6 +138,18 @@ def upgrade() -> None:
             "condition_rating >= 1 AND condition_rating <= 10",
             name="ck_lot_condition_rating",
         ),
+        sa.CheckConstraint(
+            "floor_price > 0 AND start_price >= floor_price",
+            name="ck_lot_price_bounds",
+        ),
+        sa.CheckConstraint(
+            "step_amount > 0",
+            name="ck_lot_step_amount",
+        ),
+        sa.CheckConstraint(
+            "interval_seconds > 0",
+            name="ck_lot_interval_seconds",
+        ),
     )
     op.create_index("ix_lots_title", "lots", ["title"])
     op.create_index("ix_lots_brand", "lots", ["brand"])
@@ -136,10 +158,16 @@ def upgrade() -> None:
     op.create_index("ix_lots_current_price", "lots", ["current_price"])
     op.create_index("ix_lots_status", "lots", ["status"])
     op.create_index("ix_lots_next_drop_at", "lots", ["next_drop_at"])
+    op.create_index("ix_lots_winner_id", "lots", ["winner_id"])
 
     op.create_table(
         "lot_images",
-        sa.Column("id", uuid_type, primary_key=True),
+        sa.Column(
+            "id",
+            uuid_type,
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column(
             "lot_id",
             uuid_type,
@@ -160,7 +188,12 @@ def upgrade() -> None:
 
     op.create_table(
         "price_ticks",
-        sa.Column("id", uuid_type, primary_key=True),
+        sa.Column(
+            "id",
+            uuid_type,
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column(
             "lot_id",
             uuid_type,
@@ -176,11 +209,23 @@ def upgrade() -> None:
         ),
     )
     op.create_index("ix_price_ticks_lot_id", "price_ticks", ["lot_id"])
+    op.create_index("ix_price_ticks_created_at", "price_ticks", ["created_at"])
 
     op.create_table(
         "orders",
-        sa.Column("id", uuid_type, primary_key=True),
-        sa.Column("lot_id", uuid_type, sa.ForeignKey("lots.id"), nullable=False, unique=True),
+        sa.Column(
+            "id",
+            uuid_type,
+            primary_key=True,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
+        sa.Column(
+            "lot_id",
+            uuid_type,
+            sa.ForeignKey("lots.id"),
+            nullable=False,
+            unique=True,
+        ),
         sa.Column("user_id", uuid_type, sa.ForeignKey("users.id"), nullable=True),
         sa.Column("claim_code", sa.String(length=64), nullable=False),
         sa.Column("final_price", sa.Numeric(precision=12, scale=2), nullable=False),

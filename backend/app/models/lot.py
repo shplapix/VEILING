@@ -36,6 +36,18 @@ class Lot(Base):
             "condition_rating >= 1 AND condition_rating <= 10",
             name="ck_lot_condition_rating",
         ),
+        CheckConstraint(
+            "floor_price > 0 AND start_price >= floor_price",
+            name="ck_lot_price_bounds",
+        ),
+        CheckConstraint(
+            "step_amount > 0",
+            name="ck_lot_step_amount",
+        ),
+        CheckConstraint(
+            "interval_seconds > 0",
+            name="ck_lot_interval_seconds",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -180,6 +192,7 @@ class Lot(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=True,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
