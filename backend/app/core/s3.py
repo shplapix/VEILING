@@ -1,6 +1,5 @@
 import uuid
 from typing import Any
-from urllib.parse import urlparse
 
 import aioboto3
 from botocore.exceptions import ClientError
@@ -31,8 +30,7 @@ class S3Service:
         self.public_url = public_url or settings.MINIO_PUBLIC_URL
         self.use_ssl = settings.MINIO_USE_SSL if use_ssl is None else use_ssl
 
-        parsed = urlparse(self.endpoint_raw)
-        if parsed.scheme:
+        if self.endpoint_raw.startswith(("http://", "https://")):
             self.endpoint_url = self.endpoint_raw
         else:
             protocol = "https" if self.use_ssl else "http"
