@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --veiling-acid-lime: #D2F824;
+  --veiling-electric-blue: #0052FF;
+  --veiling-carbon-black: #111112;
+  --veiling-gallery-canvas: #F4F5F8;
+  --veiling-surface-white: #FFFFFF;
+  --veiling-border-hairline: #E5E7EB;
+  --veiling-muted-steel: #71717A;
+  --radius-veiling: 0px;
+}
+
+* {
+  border-radius: 0px !important;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #F4F5F8;
+  color: #111112;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
