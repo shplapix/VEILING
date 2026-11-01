@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.enums import LotCategory, LotStatus
 
@@ -19,10 +19,20 @@ class LotImageRead(BaseModel):
 
 
 class LotImageCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     image_url: str = Field(..., min_length=1, max_length=1024)
     sort_order: int = 0
     display_order: int | None = None
     caption: str | None = Field(default=None, max_length=255)
+
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, v: str) -> str:
+        clean = v.strip()
+        if not (clean.startswith("http://") or clean.startswith("https://")):
+            raise ValueError("image_url must be an absolute http or https URL")
+        return clean
 
     @model_validator(mode="after")
     def sync_display_order(self) -> "LotImageCreate":
@@ -39,6 +49,8 @@ class ImageUploadResponse(BaseModel):
 
 
 class LotCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     title: str = Field(..., min_length=1, max_length=255)
     brand: str = Field(..., min_length=1, max_length=100)
     designer: str | None = Field(default=None, max_length=100)
@@ -59,12 +71,24 @@ class LotCreate(BaseModel):
     shipping_notes: str = Field(
         default="Застрахована кур'єрська доставка по Європі та Україні (3–5 робочих днів)"
     )
-    start_price: Decimal = Field(..., gt=Decimal("0.00"))
-    floor_price: Decimal = Field(..., gt=Decimal("0.00"))
-    step_amount: Decimal = Field(..., gt=Decimal("0.00"))
-    interval_seconds: int = Field(default=60, gt=0)
+    start_price: Decimal = Field(..., gt=Decimal("0.00"), max_digits=12, decimal_places=2)
+    floor_price: Decimal = Field(..., gt=Decimal("0.00"), max_digits=12, decimal_places=2)
+    step_amount: Decimal = Field(..., gt=Decimal("0.00"), max_digits=12, decimal_places=2)
+    interval_seconds: int = Field(default=60, gt=0, le=86400)
     status: LotStatus = Field(default=LotStatus.ACTIVE)
     images: list[LotImageCreate] = Field(default_factory=list)
+
+    @field_validator("measurements")
+    @classmethod
+    def validate_measurements(cls, v: dict[str, Any]) -> dict[str, Any]:
+        for key, val in v.items():
+            if val is not None:
+                if isinstance(val, int | float):
+                    if val <= 0:
+                        raise ValueError(f"Measurement '{key}' must be greater than zero")
+                elif not isinstance(val, dict | list | str | bool):
+                    raise ValueError(f"Invalid measurement value for '{key}'")
+        return v
 
     @model_validator(mode="after")
     def validate_prices_and_designer(self) -> "LotCreate":

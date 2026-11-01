@@ -472,3 +472,177 @@ async def test_get_and_list_lots_with_images(
     assert list_resp.status_code == 200
     lots = list_resp.json()
     assert any(lot["id"] == lot_id for lot in lots)
+
+
+async def test_upload_image_spoofed_magic_bytes_rejected(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    fake_s3: FakeS3Service,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_spoof@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    with patch("app.api.v1.lots.s3_service", fake_s3):
+        html_as_jpeg = {
+            "file": (
+                "exploit.jpg",
+                b"<!DOCTYPE html><html><body><script>alert(1)</script></body></html>",
+                "image/jpeg",
+            )
+        }
+        resp_html = await client.post(
+            "/api/v1/lots/upload-image",
+            files=html_as_jpeg,
+            headers=headers,
+        )
+        assert resp_html.status_code == 400
+        assert "JPEG image signature" in resp_html.json()["detail"]
+
+        exe_as_png = {
+            "file": (
+                "binary.png",
+                b"MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00\xff\xff\x00\x00",
+                "image/png",
+            )
+        }
+        resp_exe = await client.post(
+            "/api/v1/lots/upload-image",
+            files=exe_as_png,
+            headers=headers,
+        )
+        assert resp_exe.status_code == 400
+        assert "PNG image signature" in resp_exe.json()["detail"]
+
+        bad_webp = {
+            "file": (
+                "corrupt.webp",
+                b"RIFF\x20\x00\x00\x00NOTWEBP12345",
+                "image/webp",
+            )
+        }
+        resp_bad_webp = await client.post(
+            "/api/v1/lots/upload-image",
+            files=bad_webp,
+            headers=headers,
+        )
+        assert resp_bad_webp.status_code == 400
+        assert "WebP image signature" in resp_bad_webp.json()["detail"]
+
+        tiny_bytes = {"file": ("tiny.jpg", b"123", "image/jpeg")}
+        resp_tiny = await client.post(
+            "/api/v1/lots/upload-image",
+            files=tiny_bytes,
+            headers=headers,
+        )
+        assert resp_tiny.status_code == 400
+        assert "too small" in resp_tiny.json()["detail"].lower()
+
+
+async def test_upload_image_valid_webp(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    fake_s3: FakeS3Service,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_webp@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    with patch("app.api.v1.lots.s3_service", fake_s3):
+        valid_webp_data = (
+            b"RIFF\x18\x00\x00\x00WEBPVP8 \x0c\x00\x00\x00\x30\x01\x00\x9d\x01\x2a\x01\x00\x01\x00"
+        )
+        files = {"file": ("raf_bomber.webp", valid_webp_data, "image/webp")}
+        resp = await client.post(
+            "/api/v1/lots/upload-image",
+            files=files,
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["image_url"].endswith(".webp")
+
+
+async def test_create_lot_invalid_image_urls(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_blob_img@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload_blob = valid_lot_payload()
+    payload_blob["images"] = [
+        {"image_url": "blob:http://localhost:5173/32849203-1234", "display_order": 0}
+    ]
+    resp_blob = await client.post("/api/v1/lots", json=payload_blob, headers=headers)
+    assert resp_blob.status_code == 422
+
+    payload_js = valid_lot_payload()
+    payload_js["images"] = [{"image_url": "javascript:alert(1)", "display_order": 0}]
+    resp_js = await client.post("/api/v1/lots", json=payload_js, headers=headers)
+    assert resp_js.status_code == 422
+
+
+async def test_create_lot_whitespace_only_fields(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_whitespace@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload_ws_title = valid_lot_payload()
+    payload_ws_title["title"] = "    "
+    resp_title = await client.post("/api/v1/lots", json=payload_ws_title, headers=headers)
+    assert resp_title.status_code == 422
+
+    payload_ws_brand = valid_lot_payload()
+    payload_ws_brand["brand"] = "   \t "
+    resp_brand = await client.post("/api/v1/lots", json=payload_ws_brand, headers=headers)
+    assert resp_brand.status_code == 422
+
+
+async def test_create_lot_negative_measurements(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_measurements@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload_neg = valid_lot_payload()
+    payload_neg["measurements"] = {"pit_to_pit": -60}
+    resp_neg = await client.post("/api/v1/lots", json=payload_neg, headers=headers)
+    assert resp_neg.status_code == 422
+
+
+async def test_create_lot_price_digits_exceeded(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_digits@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload_huge = valid_lot_payload()
+    payload_huge["start_price"] = "9999999999999.00"
+    resp_huge = await client.post("/api/v1/lots", json=payload_huge, headers=headers)
+    assert resp_huge.status_code == 422

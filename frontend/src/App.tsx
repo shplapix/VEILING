@@ -15,41 +15,43 @@ export const App: React.FC = () => {
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="flex-1">
-        <section className="border-b border-hairline-border bg-pure-white py-16 sm:py-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center space-x-2 text-xs font-mono font-bold tracking-kicker uppercase text-carbon-pitch mb-4">
-                <span className="w-2.5 h-2.5 bg-acid-lime inline-block" />
-                <span>ГОЛЛАНДСЬКИЙ АУКЦІОН · ЦІНА ПАДАЄ НА ТАЙМЕРІ</span>
-              </div>
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-hero leading-[1.05] mb-6">
-                The price only goes{" "}
-                <span className="text-electric-blue">down.</span>
-              </h1>
-              <p className="text-base sm:text-lg text-muted-steel leading-relaxed font-sans mb-8">
-                Зворотний відлік, за яким ви спостерігаєте, а не аукціон, який
-                ви можете програти. У кожен момент є лише одна ціна, і вона
-                належить тому, хто забере її першим.
-              </p>
-              <div className="flex flex-wrap items-center gap-4">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => setActiveTab("falling")}
-                >
-                  ДИВИТИСЯ ЩО ПАДАЄ ЗАРАЗ
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setActiveTab("how-it-works")}
-                >
-                  ЯК ПРАЦЮЄ СПУСК
-                </Button>
+        {activeTab === "falling" && (
+          <section className="border-b border-hairline-border bg-pure-white py-16 sm:py-24">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center space-x-2 text-xs font-mono font-bold tracking-kicker uppercase text-carbon-pitch mb-4">
+                  <span className="w-2.5 h-2.5 bg-acid-lime inline-block" />
+                  <span>ГОЛЛАНДСЬКИЙ АУКЦІОН · ЦІНА ПАДАЄ НА ТАЙМЕРІ</span>
+                </div>
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-hero leading-[1.05] mb-6">
+                  The price only goes{" "}
+                  <span className="text-electric-blue">down.</span>
+                </h1>
+                <p className="text-base sm:text-lg text-muted-steel leading-relaxed font-sans mb-8">
+                  Зворотний відлік, за яким ви спостерігаєте, а не аукціон, який
+                  ви можете програти. У кожен момент є лише одна ціна, і вона
+                  належить тому, хто забере її першим.
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => setActiveTab("falling")}
+                  >
+                    ДИВИТИСЯ ЩО ПАДАЄ ЗАРАЗ
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setActiveTab("how-it-works")}
+                  >
+                    ЯК ПРАЦЮЄ СПУСК
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {activeTab === "falling" && (
           <section className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -289,29 +291,31 @@ export const App: React.FC = () => {
           />
         )}
 
-        <section className="bg-carbon-pitch text-pure-white py-16 border-t border-hairline-border/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div>
-              <span className="text-acid-lime text-xs font-mono font-bold tracking-kicker uppercase block mb-2">
-                ДЛЯ ВЛАСНИКІВ АРХІВУ
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                Маєте раритет, вартий красивого падіння?
-              </h3>
-              <p className="text-xs text-muted-steel max-w-xl mt-2 font-sans">
-                VEILING забезпечує прямий доступ до колекціонерів світового рівня
-                без затяжних торгів.
-              </p>
+        {activeTab !== "seller" && (
+          <section className="bg-carbon-pitch text-pure-white py-16 border-t border-hairline-border/20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div>
+                <span className="text-acid-lime text-xs font-mono font-bold tracking-kicker uppercase block mb-2">
+                  ДЛЯ ВЛАСНИКІВ АРХІВУ
+                </span>
+                <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  Маєте раритет, вартий красивого падіння?
+                </h3>
+                <p className="text-xs text-muted-steel max-w-xl mt-2 font-sans">
+                  VEILING забезпечує прямий доступ до колекціонерів світового рівня
+                  без затяжних торгів.
+                </p>
+              </div>
+              <Button
+                variant="accent"
+                size="lg"
+                onClick={() => setActiveTab("seller")}
+              >
+                СТВОРИТИ ЛОТ
+              </Button>
             </div>
-            <Button
-              variant="accent"
-              size="lg"
-              onClick={() => setActiveTab("seller")}
-            >
-              СТВОРИТИ ЛОТ
-            </Button>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       <Footer />

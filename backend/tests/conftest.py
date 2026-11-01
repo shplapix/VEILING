@@ -53,6 +53,27 @@ class FakeS3Service:
         if size > 10 * 1024 * 1024:
             raise ValueError("Image size exceeds maximum allowed size of 10MB")
 
+    def validate_image_bytes(self, file_data: bytes, content_type: str) -> None:
+        if len(file_data) < 8:
+            raise ValueError("Image file is too small to be a valid image")
+        clean_type = content_type.split(";")[0].lower().strip()
+        if clean_type in ("image/jpeg", "image/jpg"):
+            if not file_data.startswith(b"\xff\xd8\xff"):
+                raise ValueError("File content does not match JPEG image signature")
+        elif clean_type == "image/png":
+            if not file_data.startswith(b"\x89PNG\r\n\x1a\n"):
+                raise ValueError("File content does not match PNG image signature")
+        elif clean_type == "image/webp" and not (
+            file_data.startswith(b"RIFF") and file_data[8:12] == b"WEBP"
+        ):
+            raise ValueError("File content does not match WebP image signature")
+
+    def validate_image(self, file_data: bytes, content_type: str) -> str:
+        extension = self.validate_content_type(content_type)
+        self.validate_image_size(len(file_data))
+        self.validate_image_bytes(file_data, content_type)
+        return extension
+
     async def ensure_bucket_exists(self) -> None:
         pass
 

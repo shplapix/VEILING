@@ -187,17 +187,12 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
                 caption: `Ракурс ${prev.length + 1}`,
               },
             ]);
-          } catch {
-            const localUrl = URL.createObjectURL(file);
-            setPhotos((prev) => [
-              ...prev,
-              {
-                id: `local-${Date.now()}-${i}`,
-                url: localUrl,
-                file,
-                caption: `Ракурс ${prev.length + 1}`,
-              },
-            ]);
+          } catch (uploadErr: unknown) {
+            const errDetail =
+              uploadErr instanceof Error
+                ? uploadErr.message
+                : "Помилка завантаження файлу в сховище";
+            setPhotoError(errDetail);
           }
         } else {
           const localUrl = URL.createObjectURL(file);
@@ -223,7 +218,13 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
   };
 
   const handleRemovePhoto = (id: string) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target && target.url.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url);
+      }
+      return prev.filter((p) => p.id !== id);
+    });
   };
 
   const handleCaptionChange = (id: string, newCaption: string) => {
@@ -261,12 +262,39 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
     setIsSubmitting(true);
 
     try {
-      const lotImages: LotImageCreatePayload[] = photos.map((p, idx) => ({
-        image_url: p.url,
-        sort_order: idx,
-        display_order: idx,
-        caption: p.caption,
-      }));
+      const resolvedImages: LotImageCreatePayload[] = [];
+      for (let idx = 0; idx < photos.length; idx++) {
+        const photo = photos[idx];
+        let finalUrl = photo.url;
+        if (photo.file) {
+          try {
+            const uploadRes = await uploadLotImage(photo.file);
+            finalUrl = uploadRes.image_url;
+            if (photo.url.startsWith("blob:")) {
+              URL.revokeObjectURL(photo.url);
+            }
+          } catch (upErr: unknown) {
+            const upMsg =
+              upErr instanceof Error
+                ? upErr.message
+                : "Не вдалося завантажити локальне фото в сховище MinIO";
+            setSubmitError(upMsg);
+            setIsSubmitting(false);
+            return;
+          }
+        }
+        if (finalUrl.startsWith("blob:")) {
+          setSubmitError("Помилка: не вдалося завантажити фотографію в MinIO.");
+          setIsSubmitting(false);
+          return;
+        }
+        resolvedImages.push({
+          image_url: finalUrl,
+          sort_order: idx,
+          display_order: idx,
+          caption: photo.caption,
+        });
+      }
 
       const payload: LotCreatePayload = {
         title: title.trim(),
@@ -304,7 +332,7 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
         step_amount: Number(stepAmount),
         interval_seconds: Number(intervalSeconds),
         status: lotStatus,
-        images: lotImages,
+        images: resolvedImages,
       };
 
       const result = await createLot(payload);

@@ -121,17 +121,9 @@ async def upload_lot_image(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File content type is missing",
         )
-    try:
-        s3_service.validate_content_type(file.content_type)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from None
-
     contents = await file.read()
     try:
-        s3_service.validate_image_size(len(contents))
+        s3_service.validate_image(contents, file.content_type)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -171,17 +163,10 @@ async def add_image_to_lot(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File content type is missing",
         )
-    try:
-        s3_service.validate_content_type(file.content_type)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from None
 
     contents = await file.read()
     try:
-        s3_service.validate_image_size(len(contents))
+        s3_service.validate_image(contents, file.content_type)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
