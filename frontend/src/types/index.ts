@@ -47,8 +47,48 @@ export interface LotImage {
   lot_id: string;
   image_url: string;
   sort_order: number;
+  display_order?: number;
   caption?: string | null;
   created_at: string;
+}
+
+export interface LotImageCreatePayload {
+  image_url: string;
+  sort_order?: number;
+  display_order?: number;
+  caption?: string | null;
+}
+
+export interface ImageUploadResponse {
+  image_url: string;
+  key: string;
+}
+
+export interface LotCreatePayload {
+  title: string;
+  brand: string;
+  designer?: string | null;
+  season: string;
+  year: number;
+  collection_name?: string | null;
+  category: LotCategory;
+  subcategory: string;
+  tagged_size: string;
+  fits_like: string;
+  measurements: LotMeasurements;
+  materials: LotMaterials;
+  condition_rating: number;
+  condition_details: string;
+  country_of_origin: string;
+  provenance_notes?: string | null;
+  seller_location?: string;
+  shipping_notes?: string;
+  start_price: number;
+  floor_price: number;
+  step_amount: number;
+  interval_seconds?: number;
+  status?: LotStatus;
+  images?: LotImageCreatePayload[];
 }
 
 export interface Lot {

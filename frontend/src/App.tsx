@@ -4,6 +4,7 @@ import { Footer } from "./components/layout/Footer";
 import { Button } from "./components/ui/Button";
 import { Badge } from "./components/ui/Badge";
 import { ArrowDownRight, Clock, ShieldCheck, TrendingDown } from "lucide-react";
+import { SellerStudioPage } from "./pages/seller/SellerStudioPage";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
@@ -282,28 +283,10 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === "seller" && (
-          <section className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-extrabold tracking-tight mb-3">
-              Студія створення лота
-            </h2>
-            <p className="text-xs text-muted-steel font-mono mb-6">
-              РОЗДІЛ ДЛЯ ВЛАСНИКІВ АРХІВУ (SELLER STUDIO)
-            </p>
-            <div className="bg-pure-white border border-hairline-border p-6 space-y-6">
-              <p className="text-xs text-muted-steel font-sans leading-relaxed">
-                Форма створення лота включає ліву колонку («Параметри експонату»:
-                бренд, сезон, заміри в см, фото) та праву колонку («Параметри падіння»:
-                стеля, підлога, крок, інтервал). Реалізація в Слайсі 3.
-              </p>
-              <Button
-                variant="dark"
-                size="md"
-                onClick={() => setActiveTab("falling")}
-              >
-                ПОВЕРНУТИСЯ ДО КАТАЛОГУ
-              </Button>
-            </div>
-          </section>
+          <SellerStudioPage
+            onNavigateHome={() => setActiveTab("falling")}
+            onLotCreated={() => setActiveTab("falling")}
+          />
         )}
 
         <section className="bg-carbon-pitch text-pure-white py-16 border-t border-hairline-border/20">
