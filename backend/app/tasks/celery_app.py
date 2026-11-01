@@ -6,6 +6,7 @@ celery_app = Celery(
     "archive_auction",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
+    include=["app.tasks.auction"],
 )
 
 celery_app.conf.update(
@@ -14,4 +15,10 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    beat_schedule={
+        "process-auction-ticks-every-5s": {
+            "task": "app.tasks.auction.process_auction_ticks",
+            "schedule": 5.0,
+        },
+    },
 )
