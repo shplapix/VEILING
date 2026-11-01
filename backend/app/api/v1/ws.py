@@ -80,7 +80,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     try:
         while True:
             await websocket.receive_text()
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         await manager.disconnect(websocket)
 
 

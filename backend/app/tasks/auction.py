@@ -45,7 +45,8 @@ async def _execute_auction_ticks(
     if dialect == "postgresql":
         expire_sql = text(
             "UPDATE lots "
-            "SET status = 'EXPIRED' "
+            "SET status = 'EXPIRED', "
+            "    updated_at = clock_timestamp() "
             "WHERE status = 'ACTIVE' "
             "  AND next_drop_at <= clock_timestamp() "
             "  AND current_price <= floor_price "
@@ -54,7 +55,8 @@ async def _execute_auction_ticks(
         tick_sql = text(
             "UPDATE lots "
             "SET current_price = GREATEST(floor_price, current_price - step_amount), "
-            "    next_drop_at = clock_timestamp() + (interval_seconds * INTERVAL '1 second') "
+            "    next_drop_at = clock_timestamp() + (interval_seconds * INTERVAL '1 second'), "
+            "    updated_at = clock_timestamp() "
             "WHERE status = 'ACTIVE' "
             "  AND next_drop_at <= clock_timestamp() "
             "  AND current_price > floor_price "
@@ -63,7 +65,8 @@ async def _execute_auction_ticks(
     else:
         expire_sql = text(
             "UPDATE lots "
-            "SET status = 'EXPIRED' "
+            "SET status = 'EXPIRED', "
+            "    updated_at = CURRENT_TIMESTAMP "
             "WHERE status = 'ACTIVE' "
             "  AND next_drop_at <= CURRENT_TIMESTAMP "
             "  AND current_price <= floor_price "
@@ -72,7 +75,9 @@ async def _execute_auction_ticks(
         tick_sql = text(
             "UPDATE lots "
             "SET current_price = MAX(floor_price, current_price - step_amount), "
-            "    next_drop_at = datetime(CURRENT_TIMESTAMP, '+' || interval_seconds || ' seconds') "
+            "    next_drop_at = "
+            "datetime(CURRENT_TIMESTAMP, '+' || interval_seconds || ' seconds'), "
+            "    updated_at = CURRENT_TIMESTAMP "
             "WHERE status = 'ACTIVE' "
             "  AND next_drop_at <= CURRENT_TIMESTAMP "
             "  AND current_price > floor_price "

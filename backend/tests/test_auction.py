@@ -3,13 +3,20 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
+from unittest.mock import AsyncMock
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.testclient import TestClient
 
-from app.core.redis import publish_message
+from app.api.v1.ws import manager
+from app.core.redis import (
+    publish_message,
+    register_local_listener,
+    unregister_local_listener,
+)
 from app.main import app
 from app.models.enums import LotCategory, LotStatus
 from app.models.lot import Lot
@@ -192,6 +199,7 @@ async def test_take_lot_authenticated_user_sets_winner(
     query_order = select(Order).where(Order.lot_id == lot.id)
     order = (await db_session.execute(query_order)).scalar_one()
     assert order.user_id == user.id
+    assert order.buyer_contact == "buyer@archive.fashion"
 
 
 async def test_take_lot_anonymous_user_succeeds(
@@ -250,3 +258,47 @@ def test_websocket_auction_events_broadcast() -> None:
         data = websocket.receive_text()
         assert "PRICE_TICK" in data
         assert "95000" in data
+
+
+def test_websocket_auction_subpath_broadcast() -> None:
+    with (
+        TestClient(app) as test_client,
+        test_client.websocket_connect("/api/v1/ws/auction") as websocket,
+    ):
+        sample_payload = (
+            '{"event": "PRICE_TICK", "lot_id": "22222222-2222-2222-2222-222222222222", '
+            '"current_price": 85000.0, "floor_price": 40000.0, "step_amount": 5000.0, '
+            '"next_drop_at": "2026-10-24T18:10:00Z"}'
+        )
+        asyncio.run(publish_message("auction_events", sample_payload))
+        data = websocket.receive_text()
+        assert "PRICE_TICK" in data
+        assert "85000" in data
+
+
+def test_websocket_disconnect_cleans_up() -> None:
+    with TestClient(app) as test_client:
+        initial_count = manager.active_count
+        with test_client.websocket_connect("/api/v1/ws"):
+            assert manager.active_count == initial_count + 1
+        assert manager.active_count == initial_count
+
+
+@pytest.mark.asyncio
+async def test_publish_message_no_duplicate_local_when_redis_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, str]] = []
+
+    async def _dummy_listener(ch: str, msg: str) -> None:
+        calls.append((ch, msg))
+
+    register_local_listener(_dummy_listener)
+    try:
+        mock_publish = AsyncMock(return_value=True)
+        monkeypatch.setattr("app.core.redis.publish_to_channel", mock_publish)
+        await publish_message("auction_events", '{"event": "TEST"}')
+        assert mock_publish.await_count == 1
+        assert len(calls) == 0
+    finally:
+        unregister_local_listener(_dummy_listener)

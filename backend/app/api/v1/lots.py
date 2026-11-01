@@ -1,12 +1,15 @@
 import asyncio
+import contextlib
 import secrets
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -22,15 +25,32 @@ from app.schemas.ws import LotTakenEvent, serialize_auction_event
 
 router = APIRouter(prefix="/lots", tags=["lots"])
 
-_lot_locks: dict[uuid.UUID, asyncio.Lock] = {}
+
+class _RefCountedLock:
+    def __init__(self) -> None:
+        self.lock = asyncio.Lock()
+        self.ref_count = 0
+
+
+_lot_locks: dict[uuid.UUID, _RefCountedLock] = {}
 _lot_locks_guard = asyncio.Lock()
 
 
-async def _get_lot_lock(lot_id: uuid.UUID) -> asyncio.Lock:
+@contextlib.asynccontextmanager
+async def _acquire_lot_lock(lot_id: uuid.UUID) -> AsyncIterator[None]:
     async with _lot_locks_guard:
         if lot_id not in _lot_locks:
-            _lot_locks[lot_id] = asyncio.Lock()
-        return _lot_locks[lot_id]
+            _lot_locks[lot_id] = _RefCountedLock()
+        entry = _lot_locks[lot_id]
+        entry.ref_count += 1
+    try:
+        async with entry.lock:
+            yield
+    finally:
+        async with _lot_locks_guard:
+            entry.ref_count -= 1
+            if entry.ref_count <= 0 and lot_id in _lot_locks:
+                del _lot_locks[lot_id]
 
 
 @router.post("/{lot_id}/take", response_model=TakeLotResponse)
@@ -41,11 +61,13 @@ async def take_lot(
     current_user: Annotated[User | None, Depends(get_optional_current_user)] = None,
 ) -> TakeLotResponse:
     req = payload or TakeLotRequest()
-    buyer_contact = (
-        req.buyer_contact.strip()
-        if req.buyer_contact and req.buyer_contact.strip()
-        else (current_user.email if current_user else "guest@veiling.archive")
-    )
+    if req.buyer_contact and req.buyer_contact.strip():
+        buyer_contact = req.buyer_contact.strip()
+    elif current_user and current_user.email:
+        buyer_contact = current_user.email
+    else:
+        buyer_contact = "guest@veiling.archive"
+
     payment_ref = (
         req.payment_reference if req.payment_reference else f"PAY-{secrets.token_hex(6).upper()}"
     )
@@ -53,8 +75,7 @@ async def take_lot(
         req.shipping_address if req.shipping_address else {"delivery": "pending_contact"}
     )
 
-    lock = await _get_lot_lock(lot_id)
-    async with lock:
+    async with _acquire_lot_lock(lot_id):
         query = select(Lot).where(Lot.id == lot_id).with_for_update()
         result = await db.execute(query)
         lot = result.scalar_one_or_none()
@@ -98,8 +119,15 @@ async def take_lot(
             payment_reference=payment_ref,
         )
         db.add(order)
-        await db.commit()
-        await db.refresh(order)
+        try:
+            await db.commit()
+            await db.refresh(order)
+        except IntegrityError:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Цю річ уже забрав інший покупець",
+            ) from None
 
         lot_taken_event = LotTakenEvent(
             event="LOT_TAKEN",

@@ -1,3 +1,6 @@
+import asyncio
+import re
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -8,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.models.enums import LotCategory, LotStatus
 from app.models.lot import Lot
 from app.models.price_tick import PriceTick
+from app.schemas.ws import LotExpiredEvent, LotTakenEvent, PriceTickEvent
 from app.tasks.auction import process_auction_ticks, process_auction_ticks_async
 
 
@@ -145,7 +149,69 @@ def test_process_auction_ticks_celery_task_wrapper(
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     monkeypatch.setattr("app.tasks.auction.async_session_maker", db_session_factory)
+
+    async def _setup_lot() -> Lot:
+        async with db_session_factory() as session:
+            return await _create_active_lot(
+                session,
+                current_price=Decimal("70000.00"),
+                step_amount=Decimal("5000.00"),
+                floor_price=Decimal("50000.00"),
+            )
+
+    lot = asyncio.run(_setup_lot())
     result = process_auction_ticks()
     assert isinstance(result, dict)
-    assert "ticks_processed" in result
-    assert "expired_processed" in result
+    assert result["ticks_processed"] == 1
+    assert result["expired_processed"] == 0
+
+    async def _verify() -> None:
+        async with db_session_factory() as session:
+            query = select(Lot).where(Lot.id == lot.id)
+            updated = (await session.execute(query)).scalar_one()
+            assert updated.current_price == Decimal("65000.00")
+            query_ticks = select(PriceTick).where(PriceTick.lot_id == lot.id)
+            ticks = (await session.execute(query_ticks)).scalars().all()
+            assert len(ticks) == 1
+            assert ticks[0].price == Decimal("65000.00")
+
+    asyncio.run(_verify())
+
+
+def test_ws_event_datetime_format_z_suffix() -> None:
+    sample_id = uuid.uuid4()
+    now_naive = datetime(2026, 10, 24, 18, 5, 0, 123456)
+    iso_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+    tick_event = PriceTickEvent(
+        event="PRICE_TICK",
+        lot_id=sample_id,
+        current_price=Decimal("95000.00"),
+        floor_price=Decimal("50000.00"),
+        step_amount=Decimal("5000.00"),
+        next_drop_at=now_naive,
+    )
+    tick_dict = tick_event.to_dict()
+    assert iso_pattern.match(str(tick_dict["next_drop_at"]))
+    assert str(tick_dict["next_drop_at"]) == "2026-10-24T18:05:00Z"
+
+    taken_event = LotTakenEvent(
+        event="LOT_TAKEN",
+        lot_id=sample_id,
+        final_price=Decimal("90000.00"),
+        taken_at=now_naive,
+        savings_percentage=10,
+    )
+    taken_dict = taken_event.to_dict()
+    assert iso_pattern.match(str(taken_dict["taken_at"]))
+    assert str(taken_dict["taken_at"]) == "2026-10-24T18:05:00Z"
+
+    expired_event = LotExpiredEvent(
+        event="LOT_EXPIRED",
+        lot_id=sample_id,
+        floor_price=Decimal("50000.00"),
+        expired_at=now_naive,
+    )
+    expired_dict = expired_event.to_dict()
+    assert iso_pattern.match(str(expired_dict["expired_at"]))
+    assert str(expired_dict["expired_at"]) == "2026-10-24T18:05:00Z"

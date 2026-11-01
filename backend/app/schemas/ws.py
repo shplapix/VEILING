@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -8,10 +8,9 @@ from pydantic import BaseModel, ConfigDict
 
 
 def _format_datetime(dt: datetime) -> str:
-    iso = dt.isoformat()
-    if iso.endswith("+00:00"):
-        return iso[:-6] + "Z"
-    return iso
+    dt = dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt.astimezone(UTC)
+    dt = dt.replace(microsecond=0)
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class PriceTickEvent(BaseModel):

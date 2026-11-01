@@ -26,7 +26,7 @@ class OrderRead(BaseModel):
 
 
 class TakeLotRequest(BaseModel):
-    buyer_contact: str = "guest@veiling.archive"
+    buyer_contact: str | None = None
     shipping_address: dict[str, Any] = Field(default_factory=dict)
     payment_reference: str | None = None
 

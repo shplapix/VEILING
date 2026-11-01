@@ -55,7 +55,7 @@ async def publish_message(
     redis_client: aioredis.Redis[str] | None = None,
 ) -> None:
     published = await publish_to_channel(channel, message, redis_client)
-    if not published or _local_listeners:
+    if not published:
         for listener in list(_local_listeners):
             with contextlib.suppress(Exception):
                 await listener(channel, message)
