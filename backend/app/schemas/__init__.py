@@ -1,3 +1,5 @@
+from app.schemas.lot import LotImageRead, LotRead
+from app.schemas.order import OrderRead, TakeLotRequest, TakeLotResponse
 from app.schemas.user import (
     TokenPayload,
     TokenResponse,
@@ -5,6 +7,13 @@ from app.schemas.user import (
     UserCreate,
     UserLogin,
     UserRead,
+)
+from app.schemas.ws import (
+    AuctionEvent,
+    LotExpiredEvent,
+    LotTakenEvent,
+    PriceTickEvent,
+    serialize_auction_event,
 )
 
 __all__ = [
@@ -14,4 +23,14 @@ __all__ = [
     "UserRead",
     "TokenResponse",
     "TokenPayload",
+    "LotRead",
+    "LotImageRead",
+    "OrderRead",
+    "TakeLotRequest",
+    "TakeLotResponse",
+    "PriceTickEvent",
+    "LotTakenEvent",
+    "LotExpiredEvent",
+    "AuctionEvent",
+    "serialize_auction_event",
 ]

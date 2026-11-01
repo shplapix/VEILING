@@ -25,6 +25,7 @@ __all__ = [
     "get_current_active_user",
     "get_current_seller",
     "get_current_admin",
+    "get_optional_current_user",
 ]
 
 
@@ -89,3 +90,26 @@ async def get_current_admin(
             detail="Admin privileges required",
         )
     return current_user
+
+
+async def get_optional_current_user(
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = decode_access_token(token)
+        token_data = TokenPayload.model_validate(payload)
+        if not token_data.sub:
+            return None
+        user_id = uuid.UUID(token_data.sub)
+    except (jwt.PyJWTError, ValueError):
+        return None
+
+    query = select(User).where(User.id == user_id)
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return None
+    return user
