@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 from collections.abc import Callable, Coroutine
 from typing import Any
