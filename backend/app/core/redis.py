@@ -64,5 +64,6 @@ async def publish_message(
 async def close_redis() -> None:
     global _redis_client
     if _redis_client is not None:
-        await _redis_client.close()
+        close_fn = getattr(_redis_client, "aclose", _redis_client.close)
+        await close_fn()
         _redis_client = None

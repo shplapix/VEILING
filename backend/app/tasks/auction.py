@@ -148,7 +148,7 @@ async def process_auction_ticks_async(
 
 
 @task(name="app.tasks.auction.process_auction_ticks")
-def process_auction_ticks() -> dict[str, int]:
+def process_auction_ticks(session: AsyncSession | None = None) -> dict[str, int]:
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -156,6 +156,6 @@ def process_auction_ticks() -> dict[str, int]:
 
     if loop and loop.is_running():
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(lambda: asyncio.run(process_auction_ticks_async()))
+            future = executor.submit(lambda: asyncio.run(process_auction_ticks_async(session)))
             return future.result()
-    return asyncio.run(process_auction_ticks_async())
+    return asyncio.run(process_auction_ticks_async(session))

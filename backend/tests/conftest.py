@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -80,7 +81,7 @@ def fake_s3() -> FakeS3Service:
 
 
 @pytest.fixture
-async def db_session() -> AsyncIterator[AsyncSession]:
+async def db_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -88,24 +89,36 @@ async def db_session() -> AsyncIterator[AsyncSession]:
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    session_factory = async_sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
-    async with session_factory() as session:
-        yield session
-
+    yield engine
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 
 @pytest.fixture
-async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
+def db_session_factory(db_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(
+        bind=db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+@pytest.fixture
+async def db_session(
+    db_session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
+    async with db_session_factory() as session:
+        yield session
+
+
+@pytest.fixture
+async def client(
+    db_session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncClient]:
     async def override_get_db() -> AsyncIterator[AsyncSession]:
-        yield db_session
+        async with db_session_factory() as session:
+            yield session
 
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
