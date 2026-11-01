@@ -3,23 +3,25 @@ import contextlib
 import secrets
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_db, get_optional_current_user
+from app.api.deps import get_current_seller, get_db, get_optional_current_user
 from app.core.redis import publish_message
+from app.core.s3 import s3_service
 from app.models.enums import LotStatus, OrderStatus
 from app.models.lot import Lot
+from app.models.lot_image import LotImage
 from app.models.order import Order, generate_claim_code
 from app.models.user import User
-from app.schemas.lot import LotRead
+from app.schemas.lot import ImageUploadResponse, LotCreate, LotImageRead, LotRead
 from app.schemas.order import OrderRead, TakeLotRequest, TakeLotResponse
 from app.schemas.ws import LotTakenEvent, serialize_auction_event
 
@@ -51,6 +53,157 @@ async def _acquire_lot_lock(lot_id: uuid.UUID) -> AsyncIterator[None]:
             entry.ref_count -= 1
             if entry.ref_count <= 0 and lot_id in _lot_locks:
                 del _lot_locks[lot_id]
+
+
+@router.post("", response_model=LotRead, status_code=status.HTTP_201_CREATED)
+async def create_lot(
+    payload: LotCreate,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_seller)],
+) -> Lot:
+    now = datetime.now(UTC)
+    is_active = payload.status == LotStatus.ACTIVE
+    started_at = now if is_active else None
+    next_drop_at = (now + timedelta(seconds=payload.interval_seconds)) if is_active else None
+
+    lot = Lot(
+        title=payload.title,
+        brand=payload.brand,
+        designer=payload.designer or payload.brand,
+        season=payload.season,
+        year=payload.year,
+        collection_name=payload.collection_name,
+        category=payload.category,
+        subcategory=payload.subcategory,
+        tagged_size=payload.tagged_size,
+        fits_like=payload.fits_like,
+        measurements=payload.measurements,
+        materials=payload.materials,
+        condition_rating=payload.condition_rating,
+        condition_details=payload.condition_details,
+        country_of_origin=payload.country_of_origin,
+        provenance_notes=payload.provenance_notes,
+        seller_location=payload.seller_location,
+        shipping_notes=payload.shipping_notes,
+        start_price=payload.start_price,
+        floor_price=payload.floor_price,
+        current_price=payload.start_price,
+        step_amount=payload.step_amount,
+        interval_seconds=payload.interval_seconds,
+        status=payload.status,
+        started_at=started_at,
+        next_drop_at=next_drop_at,
+    )
+
+    for img in payload.images:
+        lot_image = LotImage(
+            image_url=img.image_url,
+            sort_order=img.sort_order,
+            caption=img.caption,
+        )
+        lot.images.append(lot_image)
+
+    db.add(lot)
+    await db.commit()
+
+    query = select(Lot).options(selectinload(Lot.images)).where(Lot.id == lot.id)
+    result = await db.execute(query)
+    return result.scalar_one()
+
+
+@router.post("/upload-image", response_model=ImageUploadResponse)
+async def upload_lot_image(
+    file: Annotated[UploadFile, File(...)],
+    current_user: Annotated[User, Depends(get_current_seller)],
+) -> ImageUploadResponse:
+    if not file.content_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content type is missing",
+        )
+    try:
+        s3_service.validate_content_type(file.content_type)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    contents = await file.read()
+    try:
+        s3_service.validate_image_size(len(contents))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    key, url = await s3_service.upload_image(
+        file_data=contents,
+        content_type=file.content_type,
+        prefix="lots",
+    )
+    return ImageUploadResponse(image_url=url, key=key)
+
+
+@router.post(
+    "/{lot_id}/images",
+    response_model=LotImageRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_image_to_lot(
+    lot_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_seller)],
+    file: Annotated[UploadFile, File(...)],
+    sort_order: Annotated[int, Form()] = 0,
+    display_order: Annotated[int | None, Form()] = None,
+    caption: Annotated[str | None, Form()] = None,
+) -> LotImage:
+    lot = await db.get(Lot, lot_id)
+    if lot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lot not found",
+        )
+    if not file.content_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content type is missing",
+        )
+    try:
+        s3_service.validate_content_type(file.content_type)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    contents = await file.read()
+    try:
+        s3_service.validate_image_size(len(contents))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from None
+
+    effective_order = display_order if display_order is not None else sort_order
+    _, url = await s3_service.upload_image(
+        file_data=contents,
+        content_type=file.content_type,
+        prefix=f"lots/{lot_id}",
+    )
+    image = LotImage(
+        lot_id=lot_id,
+        image_url=url,
+        sort_order=effective_order,
+        caption=caption,
+    )
+    db.add(image)
+    await db.commit()
+    await db.refresh(image)
+    return image
 
 
 @router.post("/{lot_id}/take", response_model=TakeLotResponse)

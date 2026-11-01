@@ -47,6 +47,12 @@ class FakeS3Service:
             raise ValueError(f"Invalid image type '{content_type}'")
         return ALLOWED_IMAGE_TYPES[clean_type]
 
+    def validate_image_size(self, size: int) -> None:
+        if size <= 0:
+            raise ValueError("Image file is empty")
+        if size > 10 * 1024 * 1024:
+            raise ValueError("Image size exceeds maximum allowed size of 10MB")
+
     async def ensure_bucket_exists(self) -> None:
         pass
 

@@ -44,6 +44,14 @@ class LotImage(Base):
         nullable=False,
     )
 
+    @property
+    def display_order(self) -> int:
+        return self.sort_order
+
+    @display_order.setter
+    def display_order(self, value: int) -> None:
+        self.sort_order = value
+
     lot: Mapped["Lot"] = relationship(
         "Lot",
         back_populates="images",

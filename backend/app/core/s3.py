@@ -13,6 +13,8 @@ ALLOWED_IMAGE_TYPES: dict[str, str] = {
     "image/webp": ".webp",
 }
 
+MAX_IMAGE_SIZE_BYTES: int = 10 * 1024 * 1024
+
 
 class S3Service:
     def __init__(
@@ -59,6 +61,13 @@ class S3Service:
             allowed = ", ".join(sorted(ALLOWED_IMAGE_TYPES.keys()))
             raise ValueError(f"Invalid image type '{content_type}'. Allowed MIME types: {allowed}")
         return ALLOWED_IMAGE_TYPES[clean_type]
+
+    def validate_image_size(self, size: int) -> None:
+        if size <= 0:
+            raise ValueError("Image file is empty")
+        if size > MAX_IMAGE_SIZE_BYTES:
+            max_mb = MAX_IMAGE_SIZE_BYTES // (1024 * 1024)
+            raise ValueError(f"Image size exceeds maximum allowed size of {max_mb}MB")
 
     async def ensure_bucket_exists(self) -> None:
         async with self._get_client_context() as client:
