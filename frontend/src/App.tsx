@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { Button } from "./components/ui/Button";
-import { Badge } from "./components/ui/Badge";
 import { SellerStudioPage } from "./pages/seller/SellerStudioPage";
 import { HomePage } from "./pages/HomePage";
 import { Lot } from "./types";
-
 import { LotDetailPage } from "./pages/LotDetailPage";
 import { TakeModal } from "./components/lot/TakeModal";
 import { TakeLotResponse } from "./api/lots";
+import { ClaimLookupPage } from "./pages/ClaimLookupPage";
+import { LedgerPage } from "./pages/LedgerPage";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
@@ -31,6 +31,9 @@ export const App: React.FC = () => {
   };
 
   const handleTakeSuccess = (takeResult: TakeLotResponse, lotId: string) => {
+    if (takeResult.claim_code) {
+      setClaimCodeInput(takeResult.claim_code);
+    }
     if (selectedLot && selectedLot.id === lotId) {
       setSelectedLot({
         ...selectedLot,
@@ -110,74 +113,17 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === "ledger" && (
-          <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-extrabold tracking-tight mb-2">
-              Публічний реєстр закритих угод
-            </h2>
-            <p className="text-xs text-muted-steel font-mono mb-8">
-              УСІ ПРЕДМЕТИ Є 1-OF-1 І БІЛЬШЕ НЕ ПОВТОРЮЮТЬСЯ
-            </p>
-            <div className="bg-pure-white border border-hairline-border overflow-hidden">
-              <table className="w-full text-left text-xs font-sans">
-                <thead className="bg-gallery-canvas border-b border-hairline-border text-muted-steel font-mono uppercase text-[10px] tracking-kicker">
-                  <tr>
-                    <th className="p-4">Експонат</th>
-                    <th className="p-4">Бренд / Сезон</th>
-                    <th className="p-4">Час угоди</th>
-                    <th className="p-4 text-right">Фінальна ціна</th>
-                    <th className="p-4 text-right">Падіння</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline-border">
-                  <tr>
-                    <td className="p-4 font-bold text-carbon-pitch">
-                      Astro Biker Jacket
-                    </td>
-                    <td className="p-4 text-muted-steel">
-                      Helmut Lang · AW99
-                    </td>
-                    <td className="p-4 font-mono text-muted-steel">
-                      24.10.2026 18:02
-                    </td>
-                    <td className="p-4 font-mono font-bold text-right text-carbon-pitch">
-                      132 500 ₴
-                    </td>
-                    <td className="p-4 text-right">
-                      <Badge variant="lime">-26%</Badge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <LedgerPage
+            onSelectLot={handleSelectLot}
+            onNavigateHome={() => handleTabChange("falling")}
+          />
         )}
 
         {activeTab === "lookup" && (
-          <section className="py-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-extrabold tracking-tight mb-3">
-              Знайдіть те, що ви забрали
-            </h2>
-            <p className="text-xs text-muted-steel font-mono mb-6">
-              ТУТ НЕМАЄ ОБОВ'ЯЗКОВИХ АКАУНТІВ. ВВЕДІТЬ ВАШ ЧЕК-КОД.
-            </p>
-            <div className="bg-pure-white border border-hairline-border p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-mono font-bold tracking-kicker uppercase text-carbon-pitch mb-2">
-                  КОД КВИТАНЦІЇ ЗАКРІПЛЕННЯ
-                </label>
-                <input
-                  type="text"
-                  placeholder="V-2026-XXXX-XXXX-XXXX"
-                  value={claimCodeInput}
-                  onChange={(e) => setClaimCodeInput(e.target.value)}
-                  className="w-full border border-hairline-border px-4 py-3 font-mono text-sm uppercase tracking-wider focus:outline-none focus:border-carbon-pitch rounded-none"
-                />
-              </div>
-              <Button variant="primary" size="lg" className="w-full">
-                ПОШУК КВИТАНЦІЇ
-              </Button>
-            </div>
-          </section>
+          <ClaimLookupPage
+            onSelectLot={handleSelectLot}
+            initialCode={claimCodeInput}
+          />
         )}
 
         {activeTab === "seller" && (

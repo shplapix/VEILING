@@ -128,12 +128,15 @@ export interface Lot {
 }
 
 export interface ShippingAddress {
-  recipient_name: string;
-  phone: string;
-  city: string;
-  postal_code: string;
-  address_line: string;
-  country: string;
+  recipient_name?: string;
+  phone?: string;
+  city?: string;
+  postal_code?: string;
+  address_line?: string;
+  address?: string;
+  delivery?: string;
+  country?: string;
+  [key: string]: unknown;
 }
 
 export interface Order {

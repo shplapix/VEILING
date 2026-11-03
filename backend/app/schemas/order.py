@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import OrderStatus
+from app.schemas.lot import LotRead
 
 
 class OrderRead(BaseModel):
@@ -23,6 +24,10 @@ class OrderRead(BaseModel):
     shipping_address: dict[str, Any]
     payment_reference: str
     created_at: datetime
+
+
+class OrderWithLotRead(OrderRead):
+    lot: LotRead | None = None
 
 
 class TakeLotRequest(BaseModel):
