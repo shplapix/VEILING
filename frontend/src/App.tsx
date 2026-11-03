@@ -7,6 +7,8 @@ import { SellerStudioPage } from "./pages/seller/SellerStudioPage";
 import { HomePage } from "./pages/HomePage";
 import { Lot } from "./types";
 
+import { LotDetailPage } from "./pages/LotDetailPage";
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
@@ -30,14 +32,22 @@ export const App: React.FC = () => {
       <Header activeTab={activeTab} onTabChange={handleTabChange} />
 
       <main className="flex-1">
-        {activeTab === "falling" && !selectedLot && (
-          <HomePage
-            onSelectLot={handleSelectLot}
-            onTakeLot={handleTakeLot}
-            onNavigateSeller={() => setActiveTab("seller")}
-            onNavigateHowItWorks={() => setActiveTab("how-it-works")}
+        {selectedLot ? (
+          <LotDetailPage
+            initialLot={selectedLot}
+            onBack={() => setSelectedLot(null)}
+            onTake={handleTakeLot}
           />
-        )}
+        ) : (
+          <>
+            {activeTab === "falling" && (
+              <HomePage
+                onSelectLot={handleSelectLot}
+                onTakeLot={handleTakeLot}
+                onNavigateSeller={() => setActiveTab("seller")}
+                onNavigateHowItWorks={() => setActiveTab("how-it-works")}
+              />
+            )}
 
         {activeTab === "how-it-works" && (
           <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -188,6 +198,8 @@ export const App: React.FC = () => {
             </div>
           </section>
         )}
+      </>
+    )}
       </main>
 
       <Footer />
