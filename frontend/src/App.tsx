@@ -8,10 +8,13 @@ import { HomePage } from "./pages/HomePage";
 import { Lot } from "./types";
 
 import { LotDetailPage } from "./pages/LotDetailPage";
+import { TakeModal } from "./components/lot/TakeModal";
+import { TakeLotResponse } from "./api/lots";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
+  const [takingLot, setTakingLot] = useState<Lot | null>(null);
   const [claimCodeInput, setClaimCodeInput] = useState<string>("");
 
   const handleTabChange = (tab: string) => {
@@ -24,7 +27,18 @@ export const App: React.FC = () => {
   };
 
   const handleTakeLot = (lot: Lot) => {
-    setSelectedLot(lot);
+    setTakingLot(lot);
+  };
+
+  const handleTakeSuccess = (takeResult: TakeLotResponse, lotId: string) => {
+    if (selectedLot && selectedLot.id === lotId) {
+      setSelectedLot({
+        ...selectedLot,
+        status: "TAKEN",
+        final_price: takeResult.order.final_price || selectedLot.current_price,
+        taken_at: takeResult.order.created_at || new Date().toISOString(),
+      });
+    }
   };
 
   return (
@@ -201,6 +215,13 @@ export const App: React.FC = () => {
       </>
     )}
       </main>
+
+      <TakeModal
+        lot={takingLot}
+        isOpen={Boolean(takingLot)}
+        onClose={() => setTakingLot(null)}
+        onSuccess={handleTakeSuccess}
+      />
 
       <Footer />
     </div>
