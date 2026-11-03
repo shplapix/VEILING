@@ -1,16 +1,20 @@
+import zlib
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.s3 import s3_service
-from app.models.enums import LotCategory, LotStatus, UserRole
+from app.models.enums import LotCategory, LotStatus, OrderStatus, UserRole
 from app.models.lot import Lot
 from app.models.lot_image import LotImage
+from app.models.order import Order
+from app.models.price_tick import PriceTick
 from app.models.user import User
 from app.scripts.image_generator import generate_png_image
-from app.scripts.seed import parse_args, seed_archive_lots, seed_users
+from app.scripts.seed import _upload_or_fallback_image, parse_args, seed_archive_lots, seed_users
 from app.scripts.seed_data import ARCHIVE_EXHIBITS
 from tests.conftest import FakeS3Service
 
@@ -186,6 +190,7 @@ async def test_image_generator_magic_bytes_and_patterns() -> None:
         "camo",
         "metallic",
         "painted",
+        "stitches",
         "distressed",
         "leather",
         "knit",
@@ -210,6 +215,23 @@ async def test_image_generator_magic_bytes_and_patterns() -> None:
         assert validated_ext == ".png"
 
 
+async def test_image_generator_stitches_details() -> None:
+    img_bytes = generate_png_image(
+        width=100,
+        height=100,
+        primary_color=(30, 45, 80),
+        secondary_color=(255, 255, 255),
+        pattern_type="stitches",
+    )
+    assert img_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    assert s3_service.validate_image(img_bytes, "image/png") == ".png"
+    idat_idx = img_bytes.find(b"IDAT")
+    length = int.from_bytes(img_bytes[idat_idx - 4 : idat_idx], "big")
+    compressed = img_bytes[idat_idx + 4 : idat_idx + 4 + length]
+    raw = zlib.decompress(compressed)
+    assert b"\xff\xff\xff" in raw
+
+
 async def test_seed_reset_flag_functionality(
     db_session: AsyncSession,
 ) -> None:
@@ -223,6 +245,83 @@ async def test_seed_reset_flag_functionality(
     reset_ids = {lot.id for lot in reset_lots}
     assert len(reset_ids) == 6
     assert reset_ids != first_ids
+
+
+async def test_seed_reset_with_existing_orders_and_ticks(
+    db_session: AsyncSession,
+) -> None:
+    seeded = await seed_archive_lots(db_session, s3=None, skip_s3=True)
+    target_lot = seeded[0]
+
+    tick = PriceTick(
+        lot_id=target_lot.id,
+        price=target_lot.start_price - target_lot.step_amount,
+    )
+    db_session.add(tick)
+
+    order = Order(
+        lot_id=target_lot.id,
+        user_id=None,
+        claim_code="V-2026-BEEF-CAFE-1234",
+        final_price=target_lot.start_price,
+        savings_from_ceiling=Decimal("0.00"),
+        savings_percentage=0,
+        status=OrderStatus.PAID,
+        buyer_contact="curator@museum.org",
+        shipping_address={"country": "Ukraine", "city": "Lviv"},
+        payment_reference="pay_test_order_seed_reset",
+    )
+    db_session.add(order)
+    await db_session.commit()
+
+    reset_seeded = await seed_archive_lots(db_session, s3=None, skip_s3=True, reset=True)
+    assert len(reset_seeded) == 6
+
+    remaining_orders = (await db_session.execute(select(func.count(Order.id)))).scalar_one()
+    remaining_ticks = (await db_session.execute(select(func.count(PriceTick.id)))).scalar_one()
+    assert remaining_orders == 0
+    assert remaining_ticks == 0
+
+
+async def test_seed_s3_offline_graceful_fallback(
+    db_session: AsyncSession,
+) -> None:
+    class FailingS3Service:
+        def validate_image(self, file_data: bytes, content_type: str) -> str:
+            return s3_service.validate_image(file_data, content_type)
+
+        async def ensure_bucket_exists(self) -> None:
+            raise ConnectionError("MinIO is offline")
+
+        async def upload_image(
+            self,
+            file_data: bytes,
+            content_type: str,
+            prefix: str | None = None,
+        ) -> tuple[str, str]:
+            raise ConnectionError("MinIO is offline")
+
+    offline_s3 = FailingS3Service()
+    seeded = await seed_archive_lots(db_session, s3=offline_s3, skip_s3=False)
+    assert len(seeded) == 6
+    for lot in seeded:
+        assert len(lot.images) >= 3
+        for img in lot.images:
+            assert img.image_url.startswith("http://localhost:9000/archive-lots/lots/")
+
+
+async def test_seed_corrupted_image_magic_bytes_validation() -> None:
+    corrupted_bytes = b"not-a-valid-png-magic-byte-sequence"
+    with pytest.raises(ValueError, match="PNG image signature"):
+        s3_service.validate_image(corrupted_bytes, "image/png")
+
+    with pytest.raises(ValueError, match="Invalid PNG magic bytes"):
+        await _upload_or_fallback_image(
+            s3=None,
+            image_bytes=corrupted_bytes,
+            filename="invalid.png",
+            skip_s3=True,
+        )
 
 
 def test_seed_cli_parser_options() -> None:

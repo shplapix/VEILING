@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import contextlib
 import sys
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -16,6 +15,8 @@ from app.core.security import get_password_hash
 from app.models.enums import UserRole
 from app.models.lot import Lot
 from app.models.lot_image import LotImage
+from app.models.order import Order
+from app.models.price_tick import PriceTick
 from app.models.user import User
 from app.scripts.image_generator import generate_png_image
 from app.scripts.seed_data import ARCHIVE_EXHIBITS
@@ -48,6 +49,9 @@ async def seed_users(session: AsyncSession) -> tuple[User, User]:
             is_active=True,
         )
         session.add(admin_user)
+    else:
+        admin_user.role = UserRole.ADMIN
+        admin_user.is_active = True
 
     seller_email = "seller@veiling.test"
     seller_query = select(User).where(User.email == seller_email)
@@ -63,9 +67,18 @@ async def seed_users(session: AsyncSession) -> tuple[User, User]:
             is_active=True,
         )
         session.add(seller_user)
+    else:
+        seller_user.role = UserRole.SELLER
+        seller_user.is_active = True
 
     await session.commit()
-    return admin_user, seller_user
+    refreshed_admin = (
+        await session.execute(select(User).where(User.email == settings.ADMIN_EMAIL))
+    ).scalar_one()
+    refreshed_seller = (
+        await session.execute(select(User).where(User.email == seller_email))
+    ).scalar_one()
+    return refreshed_admin, refreshed_seller
 
 
 async def _upload_or_fallback_image(
@@ -73,16 +86,22 @@ async def _upload_or_fallback_image(
     image_bytes: bytes,
     filename: str,
     skip_s3: bool,
+    s3_active: bool = True,
 ) -> str:
-    if s3 is not None and not skip_s3:
-        with contextlib.suppress(Exception):
-            s3.validate_image(image_bytes, "image/png")
-            _, url = await s3.upload_image(
-                file_data=image_bytes,
-                content_type="image/png",
-                prefix="lots",
-            )
-            return url
+    if s3 is not None:
+        s3.validate_image(image_bytes, "image/png")
+        if not skip_s3 and s3_active:
+            try:
+                _, url = await s3.upload_image(
+                    file_data=image_bytes,
+                    content_type="image/png",
+                    prefix="lots",
+                )
+                return url
+            except Exception:
+                pass
+    elif not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Invalid PNG magic bytes")
 
     clean_base = settings.MINIO_PUBLIC_URL.rstrip("/")
     return f"{clean_base}/lots/{filename}"
@@ -97,12 +116,19 @@ async def seed_archive_lots(
     reset: bool = False,
 ) -> list[Lot]:
     if reset:
+        await session.execute(delete(Order))
+        await session.execute(delete(PriceTick))
+        await session.execute(delete(LotImage))
         await session.execute(delete(Lot))
         await session.commit()
 
+    s3_active = False
     if s3 is not None and not skip_s3:
-        with contextlib.suppress(Exception):
+        try:
             await s3.ensure_bucket_exists()
+            s3_active = True
+        except Exception:
+            s3_active = False
 
     seeded_lots: list[Lot] = []
     now = datetime.now(UTC)
@@ -126,6 +152,7 @@ async def seed_archive_lots(
                         image_bytes=img_bytes,
                         filename=img_spec.filename,
                         skip_s3=skip_s3,
+                        s3_active=s3_active,
                     )
                     new_img = LotImage(
                         image_url=image_url,
@@ -134,7 +161,14 @@ async def seed_archive_lots(
                     )
                     existing.images.append(new_img)
                 await session.commit()
-            seeded_lots.append(existing)
+                refreshed_existing = (
+                    await session.execute(
+                        select(Lot).options(selectinload(Lot.images)).where(Lot.id == existing.id)
+                    )
+                ).scalar_one()
+                seeded_lots.append(refreshed_existing)
+            else:
+                seeded_lots.append(existing)
             continue
 
         started_at = now
@@ -183,6 +217,7 @@ async def seed_archive_lots(
                     image_bytes=img_bytes,
                     filename=img_spec.filename,
                     skip_s3=skip_s3,
+                    s3_active=s3_active,
                 )
                 lot_image = LotImage(
                     image_url=image_url,
