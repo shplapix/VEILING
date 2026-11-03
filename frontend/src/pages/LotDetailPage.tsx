@@ -195,8 +195,8 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
                     <span>ЗАБРАНО ЗА {formatNumber(lot.final_price ?? lot.current_price)} ₴</span>
                   </div>
                   <p className="text-muted-steel text-xs font-sans leading-relaxed">
-                    Цю унікальну річ уже зафіксував інший покупець. Вона не
-                    повернеться на торги, оскільки існує в єдиному екземплярі.
+                    Цю унікальну річ уже зафіксував інший покупець. Вона більше не
+                    з'явиться в каталозі, оскільки існує в єдиному екземплярі.
                   </p>
                 </div>
               ) : isExpired ? (

@@ -26,6 +26,17 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
     setZoomPos({ x, y });
   };
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 0) {
+      return;
+    }
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  };
+
   return (
     <div className="space-y-4 select-none">
       <div
@@ -33,6 +44,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
         onMouseEnter={() => setIsZooming(true)}
         onMouseLeave={() => setIsZooming(false)}
         onMouseMove={handleMouseMove}
+        onTouchStart={() => setIsZooming(true)}
+        onTouchEnd={() => setIsZooming(false)}
+        onTouchMove={handleTouchMove}
       >
         {activeImage ? (
           <>

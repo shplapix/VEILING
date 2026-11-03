@@ -305,7 +305,7 @@ export const LedgerPage: React.FC<LedgerPageProps> = ({
                 НЕЗМІННІСТЬ РЕЄСТРУ
               </span>
               <p className="text-xs text-muted-steel font-sans leading-relaxed">
-                Кожна фіксація покупки фіксується унікальним чек-кодом та стає
+                Кожне закріплення лота фіксується унікальним чек-кодом та стає
                 частиною публічної історії цін будинку архівної моди VEILING.
               </p>
             </div>

@@ -101,7 +101,30 @@ async def test_order_lookup_not_found(client: AsyncClient) -> None:
     assert response.json()["detail"] == "Замовлення за вказаним чек-кодом не знайдено"
 
 
-async def test_order_ledger_returns_public_records(
+async def test_order_lookup_homoglyphs_and_dashes(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    data = await _create_lot_and_order(client, db_session, title="Helmut Lang Astro AW99")
+    real_code = data["claim_code"]
+
+    raw_tail = real_code[2:].replace("-", "—")
+    cyrillic_tail = raw_tail.replace("A", "А").replace("B", "В").replace("C", "С").replace("E", "Е")
+    ukr_input = f" В—{cyrillic_tail} "
+
+    response = await client.get(f"/api/v1/orders/lookup?code={ukr_input}")
+    assert response.status_code == 200
+    res_data = response.json()
+    assert res_data["claim_code"] == real_code
+    assert res_data["lot"]["title"] == "Helmut Lang Astro AW99"
+
+
+async def test_order_lookup_masked_code_rejected(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/orders/lookup?code=V-2026-****-****")
+    assert response.status_code == 404
+
+
+async def test_order_ledger_returns_public_records_without_pii_leak(
     client: AsyncClient,
     db_session: AsyncSession,
 ) -> None:
@@ -114,14 +137,19 @@ async def test_order_ledger_returns_public_records(
     assert isinstance(ledger, list)
     assert len(ledger) >= 2
 
-    codes = [record["claim_code"] for record in ledger]
-    assert item1["claim_code"] in codes
-    assert item2["claim_code"] in codes
+    lot_ids = [record["lot_id"] for record in ledger]
+    assert str(item1["lot"].id) in lot_ids
+    assert str(item2["lot"].id) in lot_ids
 
     for record in ledger:
         assert "final_price" in record
         assert "savings_percentage" in record
         assert "lot" in record
+        assert "buyer_contact" not in record
+        assert "shipping_address" not in record
+        assert "payment_reference" not in record
+        assert "user_id" not in record
+        assert record["claim_code"].endswith("****-****")
         if record["lot"]:
             assert "title" in record["lot"]
             assert "brand" in record["lot"]

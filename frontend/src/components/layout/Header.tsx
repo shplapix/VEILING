@@ -58,6 +58,25 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      <div className="md:hidden flex items-center overflow-x-auto space-x-4 px-4 sm:px-6 py-2 border-t border-hairline-border bg-gallery-canvas text-[11px] font-bold tracking-wider">
+        {navItems.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange?.(item.id)}
+              className={`whitespace-nowrap transition-colors uppercase py-1 ${
+                isActive
+                  ? "text-carbon-pitch border-b-2 border-carbon-pitch"
+                  : "text-muted-steel hover:text-carbon-pitch"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
     </header>
   );
 };

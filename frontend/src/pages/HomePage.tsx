@@ -13,6 +13,7 @@ interface HomePageProps {
   onNavigateSeller: () => void;
   onNavigateHowItWorks: () => void;
   takingLotId?: string | null;
+  lastTakenLot?: { lotId: string; finalPrice?: number; takenAt?: string } | null;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -21,6 +22,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigateSeller,
   onNavigateHowItWorks,
   takingLotId,
+  lastTakenLot,
 }) => {
   const [lots, setLots] = useState<Lot[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -91,6 +93,24 @@ export const HomePage: React.FC<HomePageProps> = ({
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!lastTakenLot) {
+      return;
+    }
+    setLots((prev) =>
+      prev.map((l) =>
+        l.id === lastTakenLot.lotId
+          ? {
+              ...l,
+              status: "TAKEN",
+              final_price: lastTakenLot.finalPrice ?? l.current_price,
+              taken_at: lastTakenLot.takenAt ?? new Date().toISOString(),
+            }
+          : l
+      )
+    );
+  }, [lastTakenLot]);
 
   const activeLots = lots.filter((l) => l.status === "ACTIVE");
   const otherLots = lots.filter((l) => l.status !== "ACTIVE");
@@ -296,7 +316,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             </h3>
             <p className="text-xs text-muted-steel max-w-xl mt-2 font-sans">
               VEILING забезпечує прямий доступ до колекціонерів світового рівня без
-              затяжних торгів.
+              виснажливого очікування.
             </p>
           </div>
           <Button variant="accent" size="lg" onClick={onNavigateSeller}>

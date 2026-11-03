@@ -16,6 +16,11 @@ export const App: React.FC = () => {
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
   const [takingLot, setTakingLot] = useState<Lot | null>(null);
   const [claimCodeInput, setClaimCodeInput] = useState<string>("");
+  const [lastTakenLot, setLastTakenLot] = useState<{
+    lotId: string;
+    finalPrice?: number;
+    takenAt?: string;
+  } | null>(null);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -31,6 +36,10 @@ export const App: React.FC = () => {
   };
 
   const handleTakeSuccess = (takeResult: TakeLotResponse, lotId: string) => {
+    const finalPrice = takeResult.order?.final_price || undefined;
+    const takenAt = takeResult.order?.created_at || new Date().toISOString();
+    setLastTakenLot({ lotId, finalPrice, takenAt });
+
     if (takeResult.claim_code) {
       setClaimCodeInput(takeResult.claim_code);
     }
@@ -38,8 +47,8 @@ export const App: React.FC = () => {
       setSelectedLot({
         ...selectedLot,
         status: "TAKEN",
-        final_price: takeResult.order.final_price || selectedLot.current_price,
-        taken_at: takeResult.order.created_at || new Date().toISOString(),
+        final_price: finalPrice ?? selectedLot.current_price,
+        taken_at: takenAt,
       });
     }
   };
@@ -63,6 +72,8 @@ export const App: React.FC = () => {
                 onTakeLot={handleTakeLot}
                 onNavigateSeller={() => setActiveTab("seller")}
                 onNavigateHowItWorks={() => setActiveTab("how-it-works")}
+                takingLotId={takingLot?.id}
+                lastTakenLot={lastTakenLot}
               />
             )}
 
@@ -145,7 +156,7 @@ export const App: React.FC = () => {
                 </h3>
                 <p className="text-xs text-muted-steel max-w-xl mt-2 font-sans">
                   VEILING забезпечує прямий доступ до колекціонерів світового рівня
-                  без затяжних торгів.
+                  без виснажливого очікування.
                 </p>
               </div>
               <Button

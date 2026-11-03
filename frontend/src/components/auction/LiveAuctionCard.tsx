@@ -37,7 +37,11 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
 
   const formattedTimer =
     secondsRemaining != null && secondsRemaining >= 0
-      ? `00:${secondsRemaining < 10 ? `0${secondsRemaining}` : secondsRemaining}`
+      ? `${Math.floor(secondsRemaining / 60)
+          .toString()
+          .padStart(2, "0")}:${(secondsRemaining % 60)
+          .toString()
+          .padStart(2, "0")}`
       : null;
 
   return (
