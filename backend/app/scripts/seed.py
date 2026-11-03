@@ -3,6 +3,7 @@ import asyncio
 import contextlib
 import sys
 from datetime import UTC, datetime, timedelta
+from typing import Protocol
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -10,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import Base
-from app.core.s3 import S3Service, s3_service
+from app.core.s3 import s3_service
 from app.core.security import get_password_hash
 from app.models.enums import UserRole
 from app.models.lot import Lot
@@ -18,6 +19,19 @@ from app.models.lot_image import LotImage
 from app.models.user import User
 from app.scripts.image_generator import generate_png_image
 from app.scripts.seed_data import ARCHIVE_EXHIBITS
+
+
+class S3ClientProtocol(Protocol):
+    def validate_image(self, file_data: bytes, content_type: str) -> str: ...
+
+    async def ensure_bucket_exists(self) -> None: ...
+
+    async def upload_image(
+        self,
+        file_data: bytes,
+        content_type: str,
+        prefix: str | None = None,
+    ) -> tuple[str, str]: ...
 
 
 async def seed_users(session: AsyncSession) -> tuple[User, User]:
@@ -55,7 +69,7 @@ async def seed_users(session: AsyncSession) -> tuple[User, User]:
 
 
 async def _upload_or_fallback_image(
-    s3: S3Service | None,
+    s3: S3ClientProtocol | None,
     image_bytes: bytes,
     filename: str,
     skip_s3: bool,
@@ -76,7 +90,7 @@ async def _upload_or_fallback_image(
 
 async def seed_archive_lots(
     session: AsyncSession,
-    s3: S3Service | None = None,
+    s3: S3ClientProtocol | None = None,
     *,
     skip_images: bool = False,
     skip_s3: bool = False,
