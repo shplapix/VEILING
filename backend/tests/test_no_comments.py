@@ -34,6 +34,10 @@ def _scan_frontend_file_for_comments(file_path: Path) -> list[str]:
                 violations.append(f"{line}: block comment detected")
                 state = "BLOCK_COMMENT"
                 i += 1
+            elif ch == "<" and i + 3 < n and content[i : i + 4] == "<!--":
+                violations.append(f"{line}: html comment detected")
+                state = "HTML_COMMENT"
+                i += 3
         elif state == "DOUBLE_QUOTE":
             if ch == "\\":
                 i += 1
@@ -54,6 +58,9 @@ def _scan_frontend_file_for_comments(file_path: Path) -> list[str]:
         elif state == "BLOCK_COMMENT" and ch == "*" and i + 1 < n and content[i + 1] == "/":
             state = "NORMAL"
             i += 1
+        elif state == "HTML_COMMENT" and ch == "-" and i + 2 < n and content[i : i + 3] == "-->":
+            state = "NORMAL"
+            i += 2
         i += 1
 
     return violations
@@ -92,7 +99,7 @@ def test_no_comments_in_frontend_code() -> None:
         return
 
     ignored_dirs = {"node_modules", "dist", ".vite"}
-    extensions = {".ts", ".tsx", ".js", ".jsx", ".css"}
+    extensions = {".ts", ".tsx", ".js", ".jsx", ".css", ".html"}
     source_files = [
         f
         for f in frontend_dir.rglob("*")
@@ -113,10 +120,12 @@ def test_comment_scanner_catches_inline_and_ignores_urls(tmp_path: Path) -> None
     test_file.write_text(
         "const x = 10; // an inline comment\n"
         'const url = "https://example.com/api";\n'
-        "/* a block comment */\n",
+        "/* a block comment */\n"
+        "<!-- an html comment -->\n",
         encoding="utf-8",
     )
     violations = _scan_frontend_file_for_comments(test_file)
-    assert len(violations) == 2
+    assert len(violations) == 3
     assert "inline single-line comment detected" in violations[0]
     assert "block comment detected" in violations[1]
+    assert "html comment detected" in violations[2]

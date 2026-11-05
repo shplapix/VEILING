@@ -6,10 +6,10 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.testclient import TestClient
 
 from app.api.v1.ws import manager
 from app.core.redis import (
