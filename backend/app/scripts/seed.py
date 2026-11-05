@@ -1,7 +1,9 @@
 import argparse
 import asyncio
+import contextlib
 import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Protocol
 
 from sqlalchemy import delete, select
@@ -20,6 +22,8 @@ from app.models.price_tick import PriceTick
 from app.models.user import User
 from app.scripts.image_generator import generate_png_image
 from app.scripts.seed_data import ARCHIVE_EXHIBITS
+
+PUBLIC_LOTS_DIR = Path("frontend/public/lots")
 
 
 class S3ClientProtocol(Protocol):
@@ -53,7 +57,7 @@ async def seed_users(session: AsyncSession) -> tuple[User, User]:
         admin_user.role = UserRole.ADMIN
         admin_user.is_active = True
 
-    seller_email = "seller@veiling.test"
+    seller_email = "seller@veiling.com"
     seller_query = select(User).where(User.email == seller_email)
     res_seller = await session.execute(seller_query)
     seller_user = res_seller.scalar_one_or_none()
@@ -88,19 +92,19 @@ async def _upload_or_fallback_image(
     skip_s3: bool,
     s3_active: bool = True,
 ) -> str:
+    content_type = "image/jpeg" if filename.lower().endswith((".jpg", ".jpeg")) else "image/png"
     if s3 is not None:
-        s3.validate_image(image_bytes, "image/png")
+        with contextlib.suppress(Exception):
+            s3.validate_image(image_bytes, content_type)
         if not skip_s3 and s3_active:
-            try:
+            with contextlib.suppress(Exception):
                 _, url = await s3.upload_image(
                     file_data=image_bytes,
-                    content_type="image/png",
+                    content_type=content_type,
                     prefix="lots",
                 )
                 return url
-            except Exception:
-                pass
-    elif not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+    elif filename.lower().endswith(".png") and not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
         raise ValueError("Invalid PNG magic bytes")
 
     clean_base = settings.MINIO_PUBLIC_URL.rstrip("/")
@@ -138,35 +142,37 @@ async def seed_archive_lots(
         existing = (await session.execute(query)).scalar_one_or_none()
 
         if existing is not None:
-            if not existing.images and not skip_images:
-                for img_spec in exhibit.images:
-                    img_bytes = generate_png_image(
-                        width=400,
-                        height=400,
-                        primary_color=img_spec.primary_color,
-                        secondary_color=img_spec.secondary_color,
-                        pattern_type=img_spec.pattern_type,
-                    )
-                    image_url = await _upload_or_fallback_image(
-                        s3=s3,
-                        image_bytes=img_bytes,
-                        filename=img_spec.filename,
-                        skip_s3=skip_s3,
-                        s3_active=s3_active,
-                    )
-                    new_img = LotImage(
-                        image_url=image_url,
-                        sort_order=img_spec.sort_order,
-                        caption=img_spec.caption,
-                    )
-                    existing.images.append(new_img)
-                await session.commit()
-                refreshed_existing = (
-                    await session.execute(
-                        select(Lot).options(selectinload(Lot.images)).where(Lot.id == existing.id)
-                    )
-                ).scalar_one()
-                seeded_lots.append(refreshed_existing)
+            if not skip_images:
+                has_jpg = any(img.image_url.endswith(".jpg") for img in existing.images)
+                if not has_jpg or not existing.images:
+                    existing.images.clear()
+                    for img_spec in exhibit.images:
+                        file_on_disk = PUBLIC_LOTS_DIR / img_spec.filename
+                        if file_on_disk.exists():
+                            img_bytes = file_on_disk.read_bytes()
+                        else:
+                            img_bytes = generate_png_image(
+                                width=400,
+                                height=400,
+                                primary_color=img_spec.primary_color,
+                                secondary_color=img_spec.secondary_color,
+                                pattern_type=img_spec.pattern_type,
+                            )
+                        image_url = await _upload_or_fallback_image(
+                            s3=s3,
+                            image_bytes=img_bytes,
+                            filename=img_spec.filename,
+                            skip_s3=skip_s3,
+                            s3_active=s3_active,
+                        )
+                        new_img = LotImage(
+                            image_url=image_url,
+                            sort_order=img_spec.sort_order,
+                            caption=img_spec.caption,
+                        )
+                        existing.images.append(new_img)
+                    await session.commit()
+                seeded_lots.append(existing)
             else:
                 seeded_lots.append(existing)
             continue
@@ -205,13 +211,17 @@ async def seed_archive_lots(
 
         if not skip_images:
             for img_spec in exhibit.images:
-                img_bytes = generate_png_image(
-                    width=400,
-                    height=400,
-                    primary_color=img_spec.primary_color,
-                    secondary_color=img_spec.secondary_color,
-                    pattern_type=img_spec.pattern_type,
-                )
+                file_on_disk = PUBLIC_LOTS_DIR / img_spec.filename
+                if file_on_disk.exists():
+                    img_bytes = file_on_disk.read_bytes()
+                else:
+                    img_bytes = generate_png_image(
+                        width=400,
+                        height=400,
+                        primary_color=img_spec.primary_color,
+                        secondary_color=img_spec.secondary_color,
+                        pattern_type=img_spec.pattern_type,
+                    )
                 image_url = await _upload_or_fallback_image(
                     s3=s3,
                     image_bytes=img_bytes,

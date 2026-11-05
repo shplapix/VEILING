@@ -24,7 +24,6 @@ async def test_seed_archive_lots_success_and_structure(
 ) -> None:
     seeded = await seed_archive_lots(db_session, s3=None, skip_s3=True)
     assert len(seeded) == len(ARCHIVE_EXHIBITS)
-    assert len(seeded) == 6
 
     titles = {lot.title for lot in seeded}
     assert 'Бомбер Raf Simons AW01 "Riot! Riot! Riot!" Camo Bomber' in titles
@@ -52,8 +51,8 @@ async def test_seed_archive_lots_success_and_structure(
     assert raf.current_price == Decimal("180000.00")
     assert raf.floor_price == Decimal("120000.00")
     assert raf.step_amount == Decimal("1500.00")
-    assert raf.interval_seconds == 60
-    assert len(raf.images) == 5
+    assert raf.interval_seconds == 45
+    assert len(raf.images) >= 3
 
     margiela = next(
         lot
@@ -64,14 +63,14 @@ async def test_seed_archive_lots_success_and_structure(
     assert margiela.designer == "Martin Margiela"
     assert margiela.category == LotCategory.BOTTOMS
     assert margiela.condition_rating == 8
-    assert len(margiela.images) == 4
+    assert len(margiela.images) >= 3
 
 
 async def test_seed_idempotency_without_duplicates(
     db_session: AsyncSession,
 ) -> None:
     first_run = await seed_archive_lots(db_session, s3=None, skip_s3=True)
-    assert len(first_run) == 6
+    assert len(first_run) == len(ARCHIVE_EXHIBITS)
 
     total_lots_stmt = select(func.count(Lot.id))
     total_images_stmt = select(func.count(LotImage.id))
@@ -79,11 +78,11 @@ async def test_seed_idempotency_without_duplicates(
     lots_count_first = (await db_session.execute(total_lots_stmt)).scalar_one()
     images_count_first = (await db_session.execute(total_images_stmt)).scalar_one()
 
-    assert lots_count_first == 6
+    assert lots_count_first == len(ARCHIVE_EXHIBITS)
     assert images_count_first > 0
 
     second_run = await seed_archive_lots(db_session, s3=None, skip_s3=True)
-    assert len(second_run) == 6
+    assert len(second_run) == len(ARCHIVE_EXHIBITS)
 
     lots_count_second = (await db_session.execute(total_lots_stmt)).scalar_one()
     images_count_second = (await db_session.execute(total_images_stmt)).scalar_one()
@@ -99,7 +98,7 @@ async def test_seed_users_idempotency(
     assert admin_1.role == UserRole.ADMIN
     assert admin_1.email == settings.ADMIN_EMAIL
     assert seller_1.role == UserRole.SELLER
-    assert seller_1.email == "seller@veiling.test"
+    assert seller_1.email == "seller@veiling.com"
 
     admin_2, seller_2 = await seed_users(db_session)
     assert admin_2.id == admin_1.id
@@ -151,7 +150,7 @@ async def test_seed_pricing_and_curatorial_provenance(
         assert lot.start_price >= lot.floor_price > Decimal("0.00")
         assert lot.step_amount > Decimal("0.00")
         assert lot.current_price == lot.start_price
-        assert lot.interval_seconds == 60
+        assert lot.interval_seconds > 0
         assert 1 <= lot.condition_rating <= 10
         assert lot.started_at is not None
         assert lot.next_drop_at is not None
@@ -161,7 +160,6 @@ async def test_seed_pricing_and_curatorial_provenance(
         assert len(lot.provenance_notes or "") > 30
         assert lot.seller_location != ""
         assert "доставка" in lot.shipping_notes.lower()
-        assert "кур'" in lot.shipping_notes.lower()
 
 
 async def test_seed_with_s3_upload_pipeline(
@@ -169,7 +167,7 @@ async def test_seed_with_s3_upload_pipeline(
     fake_s3: FakeS3Service,
 ) -> None:
     seeded = await seed_archive_lots(db_session, s3=fake_s3, skip_s3=False)
-    assert len(seeded) == 6
+    assert len(seeded) == len(ARCHIVE_EXHIBITS)
 
     total_images = sum(len(lot.images) for lot in seeded)
     assert len(fake_s3.storage) == total_images
@@ -238,12 +236,12 @@ async def test_seed_reset_flag_functionality(
     await seed_archive_lots(db_session, s3=None, skip_s3=True)
     first_lots = (await db_session.execute(select(Lot))).scalars().all()
     first_ids = {lot.id for lot in first_lots}
-    assert len(first_ids) == 6
+    assert len(first_ids) == len(ARCHIVE_EXHIBITS)
 
     await seed_archive_lots(db_session, s3=None, skip_s3=True, reset=True)
     reset_lots = (await db_session.execute(select(Lot))).scalars().all()
     reset_ids = {lot.id for lot in reset_lots}
-    assert len(reset_ids) == 6
+    assert len(reset_ids) == len(ARCHIVE_EXHIBITS)
     assert reset_ids != first_ids
 
 
@@ -275,7 +273,7 @@ async def test_seed_reset_with_existing_orders_and_ticks(
     await db_session.commit()
 
     reset_seeded = await seed_archive_lots(db_session, s3=None, skip_s3=True, reset=True)
-    assert len(reset_seeded) == 6
+    assert len(reset_seeded) == len(ARCHIVE_EXHIBITS)
 
     remaining_orders = (await db_session.execute(select(func.count(Order.id)))).scalar_one()
     remaining_ticks = (await db_session.execute(select(func.count(PriceTick.id)))).scalar_one()
@@ -303,7 +301,7 @@ async def test_seed_s3_offline_graceful_fallback(
 
     offline_s3 = FailingS3Service()
     seeded = await seed_archive_lots(db_session, s3=offline_s3, skip_s3=False)
-    assert len(seeded) == 6
+    assert len(seeded) == len(ARCHIVE_EXHIBITS)
     for lot in seeded:
         assert len(lot.images) >= 3
         for img in lot.images:

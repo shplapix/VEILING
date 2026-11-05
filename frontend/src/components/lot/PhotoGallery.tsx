@@ -53,6 +53,13 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
             <img
               src={activeImage.image_url}
               alt={activeImage.caption || title}
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const filename = activeImage.image_url.split("/").pop();
+                if (filename && !target.src.includes(`/lots/${filename}`)) {
+                  target.src = `/lots/${filename}`;
+                }
+              }}
               className={`w-full h-full object-cover object-center transition-opacity duration-200 ${
                 isZooming ? "opacity-0" : "opacity-100"
               }`}
@@ -105,6 +112,13 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
                 <img
                   src={img.image_url}
                   alt={img.caption || `${title} angle ${idx + 1}`}
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    const filename = img.image_url.split("/").pop();
+                    if (filename && !target.src.includes(`/lots/${filename}`)) {
+                      target.src = `/lots/${filename}`;
+                    }
+                  }}
                   className="w-full h-full object-cover object-center"
                 />
               </button>

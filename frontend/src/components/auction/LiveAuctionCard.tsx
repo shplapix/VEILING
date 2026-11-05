@@ -72,6 +72,13 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
             <img
               src={primaryImage.image_url}
               alt={lot.title}
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const filename = primaryImage.image_url.split("/").pop();
+                if (filename && !target.src.includes(`/lots/${filename}`)) {
+                  target.src = `/lots/${filename}`;
+                }
+              }}
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
             />
           ) : (

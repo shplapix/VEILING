@@ -106,7 +106,7 @@ async def test_create_lot_seller_success(
 ) -> None:
     _, token = await create_user_with_role(
         db_session,
-        "seller@veiling.test",
+        "seller@veiling.com",
         UserRole.SELLER,
     )
     payload = valid_lot_payload()

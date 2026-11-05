@@ -36,8 +36,8 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
 }) => {
   const photoInputId = useId();
   const [token, setToken] = useState<string | null>(getStoredToken());
-  const [authEmail, setAuthEmail] = useState<string>("seller@veiling.test");
-  const [authPassword, setAuthPassword] = useState<string>("SecureSeller2026!");
+  const [authEmail, setAuthEmail] = useState<string>("seller@veiling.com");
+  const [authPassword, setAuthPassword] = useState<string>("VeilingSeller2026!");
   const [authError, setAuthError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(false);
 
@@ -440,7 +440,7 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
                 type="email"
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
-                placeholder="seller@veiling.test"
+                placeholder="seller@veiling.com"
                 className="border border-hairline-border px-2.5 py-1 text-xs font-mono rounded-none bg-pure-white"
               />
               <input

@@ -6,11 +6,14 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any, TypeVar, cast
 
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.database import async_session_maker
 from app.core.redis import publish_message
+from app.models.enums import LotStatus
+from app.models.lot import Lot
 from app.models.price_tick import PriceTick
 from app.schemas.ws import LotExpiredEvent, PriceTickEvent, serialize_auction_event
 from app.tasks.celery_app import celery_app
@@ -32,6 +35,89 @@ def _parse_datetime(raw: object, fallback: datetime) -> datetime:
         except ValueError:
             return fallback
     return fallback
+
+
+async def cycle_reserve_lots(
+    session: AsyncSession,
+    now: datetime,
+    redis_client: Any | None = None,
+    target_active: int = 6,
+) -> int:
+    active_count_res = await session.execute(
+        select(func.count()).select_from(Lot).where(Lot.status == LotStatus.ACTIVE)
+    )
+    active_count = active_count_res.scalar() or 0
+    if active_count >= target_active:
+        return 0
+
+    needed = target_active - active_count
+    candidates: list[Lot] = []
+
+    fresh_query = (
+        select(Lot)
+        .options(selectinload(Lot.images))
+        .where(Lot.status.in_([LotStatus.DRAFT, LotStatus.SCHEDULED]))
+        .order_by(Lot.created_at.asc())
+        .limit(needed)
+    )
+    fresh_lots = list((await session.execute(fresh_query)).scalars().all())
+    candidates.extend(fresh_lots)
+
+    if len(candidates) < needed:
+        still_needed = needed - len(candidates)
+        expired_query = (
+            select(Lot)
+            .options(selectinload(Lot.images))
+            .where(Lot.status == LotStatus.EXPIRED)
+            .order_by(Lot.updated_at.asc(), Lot.created_at.asc())
+            .limit(still_needed)
+        )
+        expired_lots = list((await session.execute(expired_query)).scalars().all())
+        candidates.extend(expired_lots)
+
+    if len(candidates) < needed:
+        still_needed = needed - len(candidates)
+        taken_query = (
+            select(Lot)
+            .options(selectinload(Lot.images))
+            .where(Lot.status == LotStatus.TAKEN)
+            .order_by(Lot.taken_at.asc(), Lot.updated_at.asc())
+            .limit(still_needed)
+        )
+        taken_lots = list((await session.execute(taken_query)).scalars().all())
+        candidates.extend(taken_lots)
+
+    activated_count = 0
+    for idx, lot in enumerate(candidates):
+        lot.status = LotStatus.ACTIVE
+        lot.current_price = lot.start_price
+        lot.started_at = now
+        stagger = (idx * 15) % max(15, lot.interval_seconds)
+        lot.next_drop_at = now + timedelta(seconds=max(20, lot.interval_seconds - stagger))
+        lot.taken_at = None
+        lot.winner_id = None
+        lot.final_price = None
+        lot.updated_at = now
+        activated_count += 1
+
+        tick_event = PriceTickEvent(
+            event="PRICE_TICK",
+            lot_id=lot.id,
+            current_price=lot.current_price,
+            floor_price=lot.floor_price,
+            step_amount=lot.step_amount,
+            next_drop_at=lot.next_drop_at,
+        )
+        await publish_message(
+            "auction_events",
+            serialize_auction_event(tick_event),
+            redis_client,
+        )
+
+    if activated_count > 0:
+        await session.commit()
+
+    return activated_count
 
 
 async def _execute_auction_ticks(
@@ -134,6 +220,7 @@ async def _execute_auction_ticks(
         )
 
     await session.commit()
+
     return {
         "ticks_processed": len(ticked_rows),
         "expired_processed": len(expired_rows),
@@ -164,3 +251,31 @@ def process_auction_ticks(session: AsyncSession | None = None) -> dict[str, int]
             future = executor.submit(lambda: asyncio.run(process_auction_ticks_async(session)))
             return future.result()
     return asyncio.run(process_auction_ticks_async(session))
+
+
+async def process_cycle_lots_async(
+    session: AsyncSession | None = None,
+    redis_client: Any | None = None,
+) -> dict[str, int]:
+    now = datetime.now(UTC)
+    if session is not None:
+        count = await cycle_reserve_lots(session, now, redis_client)
+        return {"cycled_processed": count}
+
+    async with async_session_maker() as new_session:
+        count = await cycle_reserve_lots(new_session, now, redis_client)
+        return {"cycled_processed": count}
+
+
+@task(name="app.tasks.auction.cycle_auction_lots")
+def cycle_auction_lots(session: AsyncSession | None = None) -> dict[str, int]:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(lambda: asyncio.run(process_cycle_lots_async(session)))
+            return future.result()
+    return asyncio.run(process_cycle_lots_async(session))

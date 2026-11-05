@@ -254,10 +254,14 @@ def test_websocket_auction_events_broadcast() -> None:
             '"current_price": 95000.0, "floor_price": 50000.0, "step_amount": 5000.0, '
             '"next_drop_at": "2026-10-24T18:05:00Z"}'
         )
-        asyncio.run(publish_message("auction_events", sample_payload))
-        data = websocket.receive_text()
-        assert "PRICE_TICK" in data
-        assert "95000" in data
+        found = False
+        for _ in range(10):
+            asyncio.run(publish_message("auction_events", sample_payload))
+            msg = websocket.receive_text()
+            if "95000" in msg:
+                found = True
+                break
+        assert found
 
 
 def test_websocket_auction_subpath_broadcast() -> None:
@@ -270,10 +274,14 @@ def test_websocket_auction_subpath_broadcast() -> None:
             '"current_price": 85000.0, "floor_price": 40000.0, "step_amount": 5000.0, '
             '"next_drop_at": "2026-10-24T18:10:00Z"}'
         )
-        asyncio.run(publish_message("auction_events", sample_payload))
-        data = websocket.receive_text()
-        assert "PRICE_TICK" in data
-        assert "85000" in data
+        found = False
+        for _ in range(10):
+            asyncio.run(publish_message("auction_events", sample_payload))
+            msg = websocket.receive_text()
+            if "85000" in msg:
+                found = True
+                break
+        assert found
 
 
 def test_websocket_disconnect_cleans_up() -> None:

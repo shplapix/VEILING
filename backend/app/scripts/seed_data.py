@@ -10,8 +10,8 @@ class SeedImageSpec:
     filename: str
     sort_order: int
     caption: str
-    primary_color: tuple[int, int, int]
-    secondary_color: tuple[int, int, int]
+    primary_color: tuple[int, int, int] = (20, 20, 20)
+    secondary_color: tuple[int, int, int] = (40, 40, 40)
     pattern_type: str = "plain"
 
 
@@ -65,7 +65,7 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         materials={
             "outer": "100% виварена бавовна у камуфляжі Woodland з вінтажним вимиванням",
             "lining": "100% стьобаний поліамід з термопрокладкою",
-            "patches": ("Автентичні нашивки Manic Street Preachers з фотографіями Річі Едвардса"),
+            "patches": "Автентичні нашивки Manic Street Preachers з фотографіями Річі Едвардса",
             "hardware": "Металеві блискавки Raccagni",
         },
         condition_rating=9,
@@ -88,48 +88,23 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         start_price=Decimal("180000.00"),
         floor_price=Decimal("120000.00"),
         step_amount=Decimal("1500.00"),
-        interval_seconds=60,
+        interval_seconds=45,
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="raf_simons_aw01_riot_camo_front.png",
+                filename="raf_simons_aw01_riot_front.jpg",
                 sort_order=0,
                 caption="Фронтальний архівний ракурс бомбера з автентичними нашивками",
-                primary_color=(58, 68, 48),
-                secondary_color=(38, 44, 32),
-                pattern_type="camo",
             ),
             SeedImageSpec(
-                filename="raf_simons_aw01_riot_camo_texture.png",
+                filename="raf_simons_aw01_riot_detail.jpg",
                 sort_order=1,
-                caption="Макро-ракурс вивареного бавовняного твілу та фактури тканини",
-                primary_color=(72, 82, 58),
-                secondary_color=(45, 52, 36),
-                pattern_type="camo",
+                caption="Макро-ракурс вивареного бавовняного твілу та фактури нашивок",
             ),
             SeedImageSpec(
-                filename="raf_simons_aw01_riot_camo_hardware.png",
+                filename="raf_simons_aw01_riot_macro.jpg",
                 sort_order=2,
                 caption="Деталь металевої блискавки Raccagni та нарукавної кишені патронташа",
-                primary_color=(80, 80, 80),
-                secondary_color=(50, 50, 50),
-                pattern_type="hardware",
-            ),
-            SeedImageSpec(
-                filename="raf_simons_aw01_riot_camo_tag.png",
-                sort_order=3,
-                caption="Автентична ткана бірка Raf Simons Autumn-Winter 2001-2002",
-                primary_color=(230, 230, 225),
-                secondary_color=(20, 20, 20),
-                pattern_type="tag",
-            ),
-            SeedImageSpec(
-                filename="raf_simons_aw01_riot_camo_back.png",
-                sort_order=4,
-                caption="Вигляд зі спинки з архітектурним оверсайз кроєм",
-                primary_color=(55, 65, 45),
-                secondary_color=(35, 42, 30),
-                pattern_type="camo",
             ),
         ],
     ),
@@ -174,40 +149,23 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         start_price=Decimal("140000.00"),
         floor_price=Decimal("90000.00"),
         step_amount=Decimal("1200.00"),
-        interval_seconds=60,
+        interval_seconds=50,
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="helmut_lang_aw99_astro_front.png",
+                filename="helmut_lang_aw99_astro_front.jpg",
                 sort_order=0,
-                caption="Фронтальний вигляд Astro Biker Jacket з коміром з овчини",
-                primary_color=(215, 218, 222),
-                secondary_color=(170, 175, 180),
-                pattern_type="metallic",
+                caption="Фронтальний вигляд Astro Biker Jacket з коміром з натуральної овчини",
             ),
             SeedImageSpec(
-                filename="helmut_lang_aw99_astro_straps.png",
+                filename="helmut_lang_aw99_astro_detail.jpg",
                 sort_order=1,
-                caption="Внутрішні бандажні стропи bondage straps та підкладка",
-                primary_color=(40, 42, 45),
-                secondary_color=(25, 26, 28),
-                pattern_type="straps",
+                caption="Внутрішні бандажні стропи bondage straps та текстура балістичного канвасу",
             ),
             SeedImageSpec(
-                filename="helmut_lang_aw99_astro_hardware.png",
+                filename="helmut_lang_aw99_astro_macro.jpg",
                 sort_order=2,
-                caption="Масивні металеві блискавки Lampo на кишенях та рукавах",
-                primary_color=(190, 192, 195),
-                secondary_color=(120, 122, 125),
-                pattern_type="hardware",
-            ),
-            SeedImageSpec(
-                filename="helmut_lang_aw99_astro_tag.png",
-                sort_order=3,
-                caption="Оригінальний фабричний ярлик Helmut Lang New York AW1999",
-                primary_color=(245, 245, 245),
-                secondary_color=(15, 15, 15),
-                pattern_type="tag",
+                caption="Масивні металеві блискавки Lampo та автентична строчка ліктів",
             ),
         ],
     ),
@@ -250,40 +208,23 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         start_price=Decimal("98000.00"),
         floor_price=Decimal("62000.00"),
         step_amount=Decimal("850.00"),
-        interval_seconds=60,
+        interval_seconds=40,
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="margiela_artisanal_painted_denim_front.png",
+                filename="margiela_artisanal_painted_front.jpg",
                 sort_order=0,
                 caption="Фронтальний ракурс джинсів з нашаруванням фарби bianco bianchetto",
-                primary_color=(240, 240, 242),
-                secondary_color=(35, 55, 95),
-                pattern_type="painted",
             ),
             SeedImageSpec(
-                filename="margiela_artisanal_painted_denim_crackle.png",
+                filename="margiela_artisanal_painted_detail.jpg",
                 sort_order=1,
-                caption="Макро-ракурс вінтажного кракелюру та відлущування фарби",
-                primary_color=(235, 235, 238),
-                secondary_color=(45, 65, 105),
-                pattern_type="painted",
+                caption="Макро-ракурс вінтажного кракелюру та відлущування білої емалі",
             ),
             SeedImageSpec(
-                filename="margiela_artisanal_painted_denim_stitches.png",
+                filename="margiela_artisanal_painted_macro.jpg",
                 sort_order=2,
-                caption="Фірмові 4 білі стібки ручної роботи Maison Martin Margiela",
-                primary_color=(30, 45, 80),
-                secondary_color=(255, 255, 255),
-                pattern_type="stitches",
-            ),
-            SeedImageSpec(
-                filename="margiela_artisanal_painted_denim_tag.png",
-                sort_order=3,
-                caption="Текстильна бирка Artisanal Line 0 з круглим маркуванням",
-                primary_color=(250, 250, 250),
-                secondary_color=(20, 20, 20),
-                pattern_type="tag",
+                caption="Фірмові білі стібки ручної роботи Maison Martin Margiela",
             ),
         ],
     ),
@@ -327,40 +268,23 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         start_price=Decimal("115000.00"),
         floor_price=Decimal("75000.00"),
         step_amount=Decimal("950.00"),
-        interval_seconds=60,
+        interval_seconds=55,
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="undercover_85_denim_front.png",
+                filename="undercover_85_denim_front.jpg",
                 sort_order=0,
                 caption="Фронтальний вигляд Undercover 85 з детальним дистресом колін",
-                primary_color=(45, 50, 58),
-                secondary_color=(25, 28, 32),
-                pattern_type="distressed",
             ),
             SeedImageSpec(
-                filename="undercover_85_denim_sashiko.png",
+                filename="undercover_85_denim_detail.jpg",
                 sort_order=1,
-                caption="Деталь ручних швів сашіко та вишитих хрестів",
-                primary_color=(50, 55, 62),
-                secondary_color=(200, 200, 205),
-                pattern_type="distressed",
+                caption="Деталь ручних швів сашіко та вишитих хрестів майстра",
             ),
             SeedImageSpec(
-                filename="undercover_85_denim_leather_patch.png",
+                filename="undercover_85_denim_macro.jpg",
                 sort_order=2,
-                caption="Шкіряні заплати та фурнітура на задніх кишенях",
-                primary_color=(32, 28, 25),
-                secondary_color=(60, 50, 42),
-                pattern_type="leather",
-            ),
-            SeedImageSpec(
-                filename="undercover_85_denim_tag.png",
-                sort_order=3,
-                caption="Автентична ткана бірка Undercover Jun Takahashi AW05",
-                primary_color=(235, 235, 235),
-                secondary_color=(10, 10, 10),
-                pattern_type="tag",
+                caption="Шкіряні заплати та фурнітура кишень японського селвіджу",
             ),
         ],
     ),
@@ -404,40 +328,23 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         start_price=Decimal("76000.00"),
         floor_price=Decimal("48000.00"),
         step_amount=Decimal("650.00"),
-        interval_seconds=60,
+        interval_seconds=45,
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="rick_owens_moody_exploder_front.png",
+                filename="rick_owens_moody_exploder_front.jpg",
                 sort_order=0,
-                caption="Фронтальний ракурс шкіряного бомбера з високим коміром",
-                primary_color=(22, 22, 24),
-                secondary_color=(12, 12, 14),
-                pattern_type="leather",
+                caption="Фронтальний ракурс шкіряного бомбера з високим коміром-стійкою",
             ),
             SeedImageSpec(
-                filename="rick_owens_moody_exploder_texture.png",
+                filename="rick_owens_moody_exploder_detail.jpg",
                 sort_order=1,
                 caption="Макро-ракурс пухирчастої фактури шкіри blistered lamb",
-                primary_color=(28, 28, 30),
-                secondary_color=(16, 16, 18),
-                pattern_type="leather",
             ),
             SeedImageSpec(
-                filename="rick_owens_moody_exploder_hardware.png",
+                filename="rick_owens_moody_exploder_macro.jpg",
                 sort_order=2,
                 caption="Масивна асиметрична металева блискавка Raccagni",
-                primary_color=(140, 140, 145),
-                secondary_color=(70, 70, 75),
-                pattern_type="hardware",
-            ),
-            SeedImageSpec(
-                filename="rick_owens_moody_exploder_tag.png",
-                sort_order=3,
-                caption="Подіумна бірка Rick Owens AW14 Moody з кодом моделі",
-                primary_color=(240, 240, 240),
-                secondary_color=(15, 15, 15),
-                pattern_type="tag",
             ),
         ],
     ),
@@ -485,28 +392,468 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
         status=LotStatus.ACTIVE,
         images=[
             SeedImageSpec(
-                filename="yohji_yamamoto_dandies_knit_front.png",
+                filename="yohji_yamamoto_dandies_knit_front.jpg",
                 sort_order=0,
                 caption="Фронтальний вигляд светра з драпірованим асиметричним коміром",
-                primary_color=(34, 34, 38),
-                secondary_color=(20, 20, 24),
-                pattern_type="knit",
             ),
             SeedImageSpec(
-                filename="yohji_yamamoto_dandies_knit_weave.png",
+                filename="yohji_yamamoto_dandies_knit_detail.jpg",
                 sort_order=1,
                 caption="Макро-ракурс об'ємного плетіння перуанської альпаки",
-                primary_color=(42, 42, 46),
-                secondary_color=(26, 26, 30),
-                pattern_type="knit",
             ),
             SeedImageSpec(
-                filename="yohji_yamamoto_dandies_knit_tag.png",
+                filename="yohji_yamamoto_dandies_knit_macro.jpg",
                 sort_order=2,
-                caption="Автентична ткана бирка Yohji Yamamoto Pour Homme AW2002",
-                primary_color=(245, 245, 245),
-                secondary_color=(10, 10, 10),
-                pattern_type="tag",
+                caption="Автентичні відкриті ручні стібки на плечових стиках",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Оксамитовий мундир Dior Homme AW04 Napoleon Officer Jacket",
+        brand="Dior Homme",
+        designer="Hedi Slimane",
+        season="Autumn/Winter",
+        year=2004,
+        collection_name="Victim of the Crime",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Військовий мундир",
+        tagged_size="48 (IT)",
+        fits_like="Ultra Slim 48",
+        measurements={
+            "pit_to_pit": 49.0,
+            "length": 69.0,
+            "shoulders": 43.0,
+            "sleeve": 67.0,
+            "hem": 48.0,
+        },
+        materials={
+            "outer": "100% вовняний кашемір преміум класу та шовковий оксамит",
+            "braiding": "Автентичні золоті гусарські галуни ручного плетіння bullion wire",
+            "lining": "100% чорний шовковий жакард Dior Homme з логотипом бджоли",
+            "buttons": "Позолочені геральдичні ґудзики з гравіюванням орла",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Колекційний екземпляр музейної цінності з легендарного показу Еді "
+            "Слімана AW04 'Victim of the Crime'. "
+            "Золоте шиття не потьмяніло, оксамит на комірі та лацканах "
+            "збережений у первозданному вигляді."
+        ),
+        country_of_origin="Зроблено у Франції",
+        provenance_notes=(
+            "Придбано на аукціоні приватної колекції в Парижі. Один з "
+            "найвизначніших силуетів революції "
+            "чоловічої моди початку 2000-х."
+        ),
+        seller_location="Париж, Франція",
+        shipping_notes=(
+            "Спеціалізована застрахована кур'єрська доставка у захисному "
+            "гардеробному кофрі Dior Homme (3–4 дні)."
+        ),
+        start_price=Decimal("165000.00"),
+        floor_price=Decimal("105000.00"),
+        step_amount=Decimal("1400.00"),
+        interval_seconds=50,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="dior_homme_aw04_napoleon_front.jpg",
+                sort_order=0,
+                caption="Фронтальний вигляд гусарського мундира з золотими галунами bullion wire",
+            ),
+            SeedImageSpec(
+                filename="dior_homme_aw04_napoleon_detail.jpg",
+                sort_order=1,
+                caption="Макро-ракурс вишитих золотих галунів та позолочених геральдичних ґудзиків",
+            ),
+            SeedImageSpec(
+                filename="dior_homme_aw04_napoleon_macro.jpg",
+                sort_order=2,
+                caption="Фактура чорного шовкового оксамиту та манжет мундира",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Гібридна фланелева парка Number (N)ine AW05 "The High Streets"',
+        brand="Number (N)ine",
+        designer="Takahiro Miyashita",
+        season="Autumn/Winter",
+        year=2005,
+        collection_name="The High Streets",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Гібридна парка",
+        tagged_size="3 (Large)",
+        fits_like="Relaxed Boxy L",
+        measurements={
+            "pit_to_pit": 62.0,
+            "length": 78.0,
+            "shoulders": 54.0,
+            "sleeve": 65.0,
+            "hem": 60.0,
+        },
+        materials={
+            "outer": "100% важка шотландська бавовняна фланель у тіньову клітинку shadow plaid",
+            "hood": "Важка вафельна термо-бавовна щільністю 420 г/м²",
+            "details": (
+                "Шовкова вишивка фірмового мотиву сліз-сердець tribal tear "
+                "heart, вінтажний дистрес країв"
+            ),
+            "hardware": "Подвійні латунні блискавки riri",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Винятковий стан культового гранж-експонату Такахіро Міяшіти. Фабричний "
+            "дистрес збережено без додаткових "
+            "пошкоджень, вафельний капюшон чистий, блискавки riri ходять м'яко."
+        ),
+        country_of_origin="Зроблено в Японії",
+        provenance_notes=(
+            "Культовий айтем з показу AW05 'The High Streets'. Документована "
+            "покупка у флагманському бутику "
+            "Number (N)ine в районі Аояма, Токіо."
+        ),
+        seller_location="Токіо, Японія",
+        shipping_notes=(
+            "Міжнародна експрес-доставка кур'єром з повним страхуванням та трекінгом (4–5 днів)."
+        ),
+        start_price=Decimal("88000.00"),
+        floor_price=Decimal("54000.00"),
+        step_amount=Decimal("750.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="number_nine_aw05_hybrid_front.jpg",
+                sort_order=0,
+                caption=(
+                    "Фронтальний вигляд гібридної парки з комбінацією фланелі та термо-капюшона"
+                ),
+            ),
+            SeedImageSpec(
+                filename="number_nine_aw05_hybrid_detail.jpg",
+                sort_order=1,
+                caption="Деталь вишивки сліз-сердець tribal tear heart та фактури фланелі",
+            ),
+            SeedImageSpec(
+                filename="number_nine_aw05_hybrid_macro.jpg",
+                sort_order=2,
+                caption="Латунні масивні замки riri та фабричний мікро-дистрес манжетів",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Тактичний парашутний бомбер Issey Miyake Men AW96 "Parachute"',
+        brand="Issey Miyake",
+        designer="Issey Miyake",
+        season="Autumn/Winter",
+        year=1996,
+        collection_name="Parachute Cargo",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Парашутний бомбер",
+        tagged_size="M (JP)",
+        fits_like="Boxy M-L",
+        measurements={
+            "pit_to_pit": 63.0,
+            "length": 66.0,
+            "shoulders": 55.0,
+            "sleeve": 61.0,
+            "hem": 54.0,
+        },
+        materials={
+            "outer": (
+                "100% надміцний балістичний парашутний нейлон з "
+                "водовідштовхувальним тефлоновим просоченням"
+            ),
+            "straps": "Армовані стропи безпеки з D-подібними кільцями з анодованого алюмінію",
+            "hardware": "16 прихованих японських блискавок YKK Vislon та тактичні фіксатори",
+            "lining": "Дихаюча сітка coolmax",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Рідкісний зразок авангардного японського мілітарі-текстилю "
+            "середини 90-х. Нейлонова тканина "
+            "без зачіпок та плям, уся складна система кишень та строп повністю комплектна."
+        ),
+        country_of_origin="Зроблено в Японії",
+        provenance_notes=(
+            "Експонат з приватної колекції індустріального дизайну в Осаці. Один "
+            "з найбільш цитованих зразків "
+            "раннього функціоналізму Іссея Міяке."
+        ),
+        seller_location="Осака, Японія",
+        shipping_notes=(
+            "Застрахована міжнародна кур'єрська доставка в антистатичному кофрі (4–6 днів)."
+        ),
+        start_price=Decimal("125000.00"),
+        floor_price=Decimal("82000.00"),
+        step_amount=Decimal("1100.00"),
+        interval_seconds=55,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="issey_miyake_aw96_parachute_front.jpg",
+                sort_order=0,
+                caption=(
+                    "Фронтальний вигляд парашутного бомбера у фірмовому кольорі оливкового нейлону"
+                ),
+            ),
+            SeedImageSpec(
+                filename="issey_miyake_aw96_parachute_detail.jpg",
+                sort_order=1,
+                caption="Деталь інтегрованих строп безпеки та анодованих D-кілець",
+            ),
+            SeedImageSpec(
+                filename="issey_miyake_aw96_parachute_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс переплетення ripstop нейлону та кишень на рукаві",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Шовковий оксамитовий сукаджан Undercover AW02 "Witches"',
+        brand="Undercover",
+        designer="Jun Takahashi",
+        season="Autumn/Winter",
+        year=2002,
+        collection_name="Witches / 魔女 (Majyo)",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Двосторонній сукаджан",
+        tagged_size="Medium",
+        fits_like="Relaxed M",
+        measurements={
+            "pit_to_pit": 57.0,
+            "length": 65.0,
+            "shoulders": 48.0,
+            "sleeve": 64.0,
+            "hem": 46.0,
+        },
+        materials={
+            "side_a": "100% смарагдовий шовковий оксамит з рельєфною вишивкою",
+            "side_b": "100% перлинно-кремовий шовковий атлас duchesse satin",
+            "embroidery": "Шовкова гладь високої щільності з мотивами магічних символів та хрестів",
+            "ribbing": "100% вовняна смугаста резинка",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Музейна якість зберігання. Оксамит не має затертостей, шовковий атлас "
+            "зворотного боку чистий без зачіпок. "
+            "Оригінальний двосторонній бігунок YKK плавно перекидається."
+        ),
+        country_of_origin="Зроблено в Японії",
+        provenance_notes=(
+            "Подіумний зразок першого паризького показу Джуна Такахаші AW02 'Witches'. "
+            "Шедевр японського ремісничого кутюру."
+        ),
+        seller_location="Токіо, Японія",
+        shipping_notes=(
+            "Застрахована міжнародна кур'єрська доставка з пломбою автентичності (4–6 днів)."
+        ),
+        start_price=Decimal("92000.00"),
+        floor_price=Decimal("58000.00"),
+        step_amount=Decimal("800.00"),
+        interval_seconds=40,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="undercover_aw02_witches_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс смарагдового шовкового оксамитового сукаджана",
+            ),
+            SeedImageSpec(
+                filename="undercover_aw02_witches_detail.jpg",
+                sort_order=1,
+                caption="Деталь вишивки шовком високої щільності магічної відьми та кісток",
+            ),
+            SeedImageSpec(
+                filename="undercover_aw02_witches_macro.jpg",
+                sort_order=2,
+                caption="Текстура шовкового оксамиту та атласних реглан-рукавів",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Вовняний жакет Comme des Garçons Homme Plus AW94 "Offbeat Humor"',
+        brand="Comme des Garçons",
+        designer="Rei Kawakubo",
+        season="Autumn/Winter",
+        year=1994,
+        collection_name="Offbeat Humor",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Деконструйований жакет",
+        tagged_size="M",
+        fits_like="Relaxed Tailored M",
+        measurements={
+            "pit_to_pit": 55.0,
+            "length": 75.0,
+            "shoulders": 48.0,
+            "sleeve": 63.0,
+            "hem": 54.0,
+        },
+        materials={
+            "outer": "100% виварена японська вовна boiled wool у комбінації з твідом Harris Tweed",
+            "construction": "Відкриті шви навиворіт, асиметричний крій лацканів, необроблені краї",
+            "lining": "Часткова шовкова купро-підкладка",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Зразок ранньої концептуальної деконструкції Рей Кавакубо. Структура "
+            "валяної вовни ідеально зберігла "
+            "щільність та текстуру без кошлатості."
+        ),
+        country_of_origin="Зроблено в Японії",
+        provenance_notes=(
+            "Експонат придбано у Токіо в Comme des Garçons Aoyama. Комплектується "
+            "оригінальними архівними запасними ґудзиками."
+        ),
+        seller_location="Лондон, Велика Британія",
+        shipping_notes="Застрахована експрес-доставка кур'єром у захисному чохлі (3–5 днів).",
+        start_price=Decimal("82000.00"),
+        floor_price=Decimal("52000.00"),
+        step_amount=Decimal("700.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="cdg_aw94_offbeat_humor_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс деконструйованого жакета з відкритими швами навиворіт",
+            ),
+            SeedImageSpec(
+                filename="cdg_aw94_offbeat_humor_detail.jpg",
+                sort_order=1,
+                caption="Деталь необробленого зрізу лацкана та текстури вивареної японської вовни",
+            ),
+            SeedImageSpec(
+                filename="cdg_aw94_offbeat_humor_macro.jpg",
+                sort_order=2,
+                caption="Асиметричне розташування ґудзиків та фактура твідового переплетення",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Шкіряна куртка Carol Christian Poell 2010 Titanium "Dead-End"',
+        brand="Carol Christian Poell",
+        designer="Carol Christian Poell",
+        season="Autumn/Winter",
+        year=2010,
+        collection_name="Dead-End",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Протезна шкіряна куртка",
+        tagged_size="48",
+        fits_like="Sculptural 48",
+        measurements={
+            "pit_to_pit": 51.0,
+            "length": 67.0,
+            "shoulders": 45.0,
+            "sleeve": 70.0,
+            "hem": 48.0,
+        },
+        materials={
+            "leather": "100% кінська шкіра CUL-PTC/010 (object-dyed blistered cordovan)",
+            "prosthetics": "Титанові ліктьові шарніри медичного класу, вживлені між шарами шкіри",
+            "hardware": "Масивна лита фурнітура зі срібла 925 проби та сталі",
+        },
+        condition_rating=10,
+        condition_details=(
+            "Новий стан архівної схоронності (Unworn Archive). Шкіра жорстка, "
+            "тримає скульптурну анатомічну форму "
+            "людського тіла, титанові шарніри функціонують ідеально."
+        ),
+        country_of_origin="Зроблено в Італії",
+        provenance_notes=(
+            "Спеціальне кураторське замовлення міланської студії CCP на Via Scarlatti. "
+            "Комплектується фірмовим мішком для рису, "
+            "металевим тегом та вішаком."
+        ),
+        seller_location="Мілан, Італія",
+        shipping_notes="Спеціалізована броньована доставка з температурним контролем (3–5 днів).",
+        start_price=Decimal("210000.00"),
+        floor_price=Decimal("145000.00"),
+        step_amount=Decimal("1800.00"),
+        interval_seconds=60,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="ccp_2010_titanium_leather_front.jpg",
+                sort_order=0,
+                caption=(
+                    "Скульптурний фронтальний ракурс куртки з кінської шкіри з анатомічним силуетом"
+                ),
+            ),
+            SeedImageSpec(
+                filename="ccp_2010_titanium_leather_detail.jpg",
+                sort_order=1,
+                caption="Деталь вживленого титанового ліктьового шарніра медичного призначення",
+            ),
+            SeedImageSpec(
+                filename="ccp_2010_titanium_leather_macro.jpg",
+                sort_order=2,
+                caption=(
+                    "Макро-ракурс забарвленої в готовому виробі шкіри кордован з "
+                    "пухирчастою фактурою"
+                ),
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Селвідж джинси Junya Watanabe MAN SS02 "Poem" Denim',
+        brand="Junya Watanabe",
+        designer="Junya Watanabe",
+        season="Spring/Summer",
+        year=2002,
+        collection_name="Poem Collection",
+        category=LotCategory.BOTTOMS,
+        subcategory="Поетичний денім",
+        tagged_size="M (W32 L32)",
+        fits_like="Straight Leg W32",
+        measurements={
+            "waist": 42.0,
+            "length": 104.0,
+            "inseam": 79.0,
+            "rise": 28.0,
+            "hem": 21.0,
+        },
+        materials={
+            "denim": (
+                "100% японський селвідж денім глибокого синього кольору Dark "
+                "Indigo з червоною кромкою"
+            ),
+            "print": "Шовкотрафаретний друк золотисто-жовтою фарбою строф любовної поезії",
+            "hardware": "Мідні заклепки та ґудзики Junya Watanabe MAN",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Один з найбільш упізнаваних предметів початку 2000-х. Текст поеми "
+            "чіткий без стирань чи тріщин, "
+            "денім зберіг первинну суху текстуру сирого селвіджу."
+        ),
+        country_of_origin="Зроблено в Японії",
+        provenance_notes=(
+            "Подіумний експонат показу Junya Watanabe MAN SS2002. Отримано з приватної колекції "
+            "лондонського колекціонера японської моди."
+        ),
+        seller_location="Лондон, Велика Британія",
+        shipping_notes="Застрахована кур'єрська доставка з персональним трекінгом (3–5 днів).",
+        start_price=Decimal("68000.00"),
+        floor_price=Decimal("42000.00"),
+        step_amount=Decimal("600.00"),
+        interval_seconds=40,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="junya_watanabe_ss02_poem_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс селвідж деніму з шовкотрафаретним принтом поеми",
+            ),
+            SeedImageSpec(
+                filename="junya_watanabe_ss02_poem_detail.jpg",
+                sort_order=1,
+                caption="Макро-ракурс золотисто-жовтого тексту поезії на сирому японському денімі",
+            ),
+            SeedImageSpec(
+                filename="junya_watanabe_ss02_poem_macro.jpg",
+                sort_order=2,
+                caption="Деталь мідних брендованих заклепок та червоної кромки selvedge",
             ),
         ],
     ),

@@ -28,19 +28,44 @@ export const HomePage: React.FC<HomePageProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [now, setNow] = useState<number>(Date.now());
 
+  const fetchLots = useCallback(async (initial: boolean = false) => {
+    try {
+      if (initial) {
+        setIsLoading(true);
+      }
+      const data = await listLots();
+      setLots(data);
+    } catch {
+      if (initial) {
+        setLots([]);
+      }
+    } finally {
+      if (initial) {
+        setIsLoading(false);
+      }
+    }
+  }, []);
+
   const handleWsEvent = useCallback((event: AuctionWsEvent) => {
     if (event.event === "PRICE_TICK") {
-      setLots((prev) =>
-        prev.map((l) =>
-          l.id === event.lot_id
-            ? {
-                ...l,
-                current_price: event.current_price,
-                next_drop_at: event.next_drop_at,
-              }
-            : l
-        )
-      );
+      setLots((prev) => {
+        const exists = prev.some((l) => l.id === event.lot_id);
+        if (exists) {
+          return prev.map((l) =>
+            l.id === event.lot_id
+              ? {
+                  ...l,
+                  status: "ACTIVE",
+                  current_price: event.current_price,
+                  next_drop_at: event.next_drop_at,
+                }
+              : l
+          );
+        } else {
+          fetchLots(false);
+          return prev;
+        }
+      });
     } else if (event.event === "LOT_TAKEN") {
       setLots((prev) =>
         prev.map((l) =>
@@ -54,6 +79,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             : l
         )
       );
+      setTimeout(() => fetchLots(false), 2000);
     } else if (event.event === "LOT_EXPIRED") {
       setLots((prev) =>
         prev.map((l) =>
@@ -66,25 +92,18 @@ export const HomePage: React.FC<HomePageProps> = ({
             : l
         )
       );
+      setTimeout(() => fetchLots(false), 2000);
     }
-  }, []);
+  }, [fetchLots]);
 
   const { isConnected } = useAuctionWs(handleWsEvent);
 
-  const fetchLots = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await listLots();
-      setLots(data);
-    } catch {
-      setLots([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchLots();
+    fetchLots(true);
+    const poller = setInterval(() => {
+      fetchLots(false);
+    }, 8000);
+    return () => clearInterval(poller);
   }, [fetchLots]);
 
   useEffect(() => {

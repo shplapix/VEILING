@@ -58,6 +58,8 @@ docker-data/
 *.sublime-workspace
 *.sublime-project
 
+celerybeat-schedule*
+
 .DS_Store
 Thumbs.db
 desktop.ini
