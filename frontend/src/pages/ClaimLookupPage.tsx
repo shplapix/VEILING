@@ -164,6 +164,14 @@ export const ClaimLookupPage: React.FC<ClaimLookupPageProps> = ({
                     <img
                       src={primaryImage.image_url}
                       alt={order.lot.title}
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        const cleanUrl = primaryImage.image_url.split("?")[0];
+                        const filename = cleanUrl.split("/").pop();
+                        if (filename && !target.src.endsWith(`/lots/${filename}`)) {
+                          target.src = `/lots/${filename}`;
+                        }
+                      }}
                       className="w-full h-full object-cover object-center"
                     />
                   ) : (

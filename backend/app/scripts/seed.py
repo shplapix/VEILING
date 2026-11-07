@@ -10,6 +10,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 
+_BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
 from app.core.config import settings
 from app.core.database import Base
 from app.core.s3 import s3_service
@@ -23,7 +27,21 @@ from app.models.user import User
 from app.scripts.image_generator import generate_png_image
 from app.scripts.seed_data import ARCHIVE_EXHIBITS
 
-PUBLIC_LOTS_DIR = Path("frontend/public/lots")
+
+def _resolve_public_lots_dir() -> Path:
+    candidates = [
+        Path(__file__).resolve().parents[3] / "frontend" / "public" / "lots",
+        Path("frontend/public/lots"),
+        Path("../frontend/public/lots"),
+        Path("../../frontend/public/lots"),
+    ]
+    for c in candidates:
+        if c.exists() and c.is_dir():
+            return c
+    return Path("frontend/public/lots")
+
+
+PUBLIC_LOTS_DIR = _resolve_public_lots_dir()
 
 
 class S3ClientProtocol(Protocol):
@@ -36,6 +54,7 @@ class S3ClientProtocol(Protocol):
         file_data: bytes,
         content_type: str,
         prefix: str | None = None,
+        filename: str | None = None,
     ) -> tuple[str, str]: ...
 
 
@@ -98,11 +117,19 @@ async def _upload_or_fallback_image(
             s3.validate_image(image_bytes, content_type)
         if not skip_s3 and s3_active:
             with contextlib.suppress(Exception):
-                _, url = await s3.upload_image(
-                    file_data=image_bytes,
-                    content_type=content_type,
-                    prefix="lots",
-                )
+                try:
+                    _, url = await s3.upload_image(
+                        file_data=image_bytes,
+                        content_type=content_type,
+                        prefix="lots",
+                        filename=filename,
+                    )
+                except TypeError:
+                    _, url = await s3.upload_image(
+                        file_data=image_bytes,
+                        content_type=content_type,
+                        prefix="lots",
+                    )
                 return url
     elif filename.lower().endswith(".png") and not image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
         raise ValueError("Invalid PNG magic bytes")
@@ -143,8 +170,16 @@ async def seed_archive_lots(
 
         if existing is not None:
             if not skip_images:
-                has_jpg = any(img.image_url.endswith(".jpg") for img in existing.images)
-                if not has_jpg or not existing.images:
+                needs_update = False
+                if len(existing.images) != len(exhibit.images):
+                    needs_update = True
+                else:
+                    sorted_existing = sorted(existing.images, key=lambda i: i.sort_order)
+                    for cur_img, spec in zip(sorted_existing, exhibit.images, strict=False):
+                        if not cur_img.image_url.endswith(spec.filename):
+                            needs_update = True
+                            break
+                if needs_update:
                     existing.images.clear()
                     for img_spec in exhibit.images:
                         file_on_disk = PUBLIC_LOTS_DIR / img_spec.filename

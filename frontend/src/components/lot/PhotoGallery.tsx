@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LotImage } from "../../types";
 import { Search } from "lucide-react";
 
@@ -18,6 +18,11 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
   const [zoomPos, setZoomPos] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
 
   const activeImage = sortedImages[activeIndex] || null;
+  const [activeSrc, setActiveSrc] = useState<string>(activeImage?.image_url || "");
+
+  useEffect(() => {
+    setActiveSrc(activeImage?.image_url || "");
+  }, [activeImage?.image_url]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -51,13 +56,16 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
         {activeImage ? (
           <>
             <img
-              src={activeImage.image_url}
+              src={activeSrc || activeImage.image_url}
               alt={activeImage.caption || title}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
-                const filename = activeImage.image_url.split("/").pop();
-                if (filename && !target.src.includes(`/lots/${filename}`)) {
-                  target.src = `/lots/${filename}`;
+                const cleanUrl = (activeImage.image_url || "").split("?")[0];
+                const filename = cleanUrl.split("/").pop();
+                if (filename && !target.src.endsWith(`/lots/${filename}`)) {
+                  const fallback = `/lots/${filename}`;
+                  target.src = fallback;
+                  setActiveSrc(fallback);
                 }
               }}
               className={`w-full h-full object-cover object-center transition-opacity duration-200 ${
@@ -68,7 +76,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
               <div
                 className="absolute inset-0 bg-no-repeat pointer-events-none"
                 style={{
-                  backgroundImage: `url(${activeImage.image_url})`,
+                  backgroundImage: `url(${activeSrc || activeImage.image_url})`,
                   backgroundPosition: `${zoomPos.x}% ${zoomPos.y}%`,
                   backgroundSize: "250%",
                 }}
@@ -114,8 +122,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, title }) => 
                   alt={img.caption || `${title} angle ${idx + 1}`}
                   onError={(e) => {
                     const target = e.currentTarget as HTMLImageElement;
-                    const filename = img.image_url.split("/").pop();
-                    if (filename && !target.src.includes(`/lots/${filename}`)) {
+                    const cleanUrl = img.image_url.split("?")[0];
+                    const filename = cleanUrl.split("/").pop();
+                    if (filename && !target.src.endsWith(`/lots/${filename}`)) {
                       target.src = `/lots/${filename}`;
                     }
                   }}

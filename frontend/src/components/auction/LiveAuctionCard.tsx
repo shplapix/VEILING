@@ -11,6 +11,7 @@ interface LiveAuctionCardProps {
   onSelect?: (lot: Lot) => void;
   onTake?: (lot: Lot) => void;
   isTaking?: boolean;
+  myClaimCode?: string;
 }
 
 export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
@@ -19,10 +20,13 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
   onSelect,
   onTake,
   isTaking = false,
+  myClaimCode,
 }) => {
   const isTaken = lot.status === "TAKEN";
   const isExpired = lot.status === "EXPIRED";
   const isActive = lot.status === "ACTIVE";
+  const isScheduled = lot.status === "SCHEDULED";
+  const isCancelled = lot.status === "CANCELLED";
 
   const primaryImage =
     lot.images && lot.images.length > 0
@@ -52,18 +56,36 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
           onClick={() => onSelect?.(lot)}
         >
           <div className="absolute top-0 left-0 z-10">
-            {isTaken ? (
-              <div className="bg-acid-lime text-carbon-pitch font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider">
-                ЗАБРАНО
+            {isActive ? (
+              <div className="bg-electric-blue text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 flex items-center gap-1.5 tracking-wider">
+                <span className="w-1.5 h-1.5 bg-acid-lime inline-block animate-pulse" />
+                <span>ПАДАЄ ЗАРАЗ</span>
+              </div>
+            ) : isTaken ? (
+              <div
+                className={
+                  myClaimCode
+                    ? "bg-emerald-600 text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider"
+                    : "bg-acid-lime text-carbon-pitch font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider"
+                }
+              >
+                {myClaimCode ? "ВАШ ЕКСПОНАТ" : "ЗАБРАНО"}
               </div>
             ) : isExpired ? (
               <div className="bg-carbon-pitch text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider">
                 ДОСЯГНУТО ПІДЛОГИ
               </div>
+            ) : isScheduled ? (
+              <div className="bg-carbon-pitch text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider">
+                СКОРО НА СПУСКУ
+              </div>
+            ) : isCancelled ? (
+              <div className="bg-carbon-pitch/60 text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider">
+                СКАСОВАНО
+              </div>
             ) : (
-              <div className="bg-electric-blue text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 flex items-center gap-1.5 tracking-wider">
-                <span className="w-1.5 h-1.5 bg-acid-lime inline-block animate-pulse" />
-                <span>ПАДАЄ ЗАРАЗ</span>
+              <div className="bg-carbon-pitch/90 text-pure-white font-mono font-bold text-xs uppercase px-3 py-1 tracking-wider">
+                В РЕЗЕРВІ
               </div>
             )}
           </div>
@@ -74,8 +96,9 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
               alt={lot.title}
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
-                const filename = primaryImage.image_url.split("/").pop();
-                if (filename && !target.src.includes(`/lots/${filename}`)) {
+                const cleanUrl = primaryImage.image_url.split("?")[0];
+                const filename = cleanUrl.split("/").pop();
+                if (filename && !target.src.endsWith(`/lots/${filename}`)) {
                   target.src = `/lots/${filename}`;
                 }
               }}
@@ -139,26 +162,7 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
       </div>
 
       <div className="p-6 pt-0 space-y-2">
-        {isTaken ? (
-          <div className="p-3 bg-gallery-canvas border border-hairline-border text-xs font-mono space-y-1">
-            <div className="flex items-center gap-1.5 text-carbon-pitch font-bold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>ЗАБРАНО ЗА {formatNumber(lot.final_price ?? lot.current_price)} ₴</span>
-            </div>
-            <div className="text-[11px] text-muted-steel">
-              Річ закріплена за покупцем. Повтор неможливий.
-            </div>
-          </div>
-        ) : isExpired ? (
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full opacity-60 cursor-not-allowed"
-            disabled
-          >
-            СПУСК ЗАВЕРШЕНО
-          </Button>
-        ) : (
+        {isActive ? (
           <Button
             variant="primary"
             size="lg"
@@ -173,10 +177,81 @@ export const LiveAuctionCard: React.FC<LiveAuctionCardProps> = ({
                 : `ЗАБРАТИ ЗА ${formatNumber(lot.current_price)} ₴`}
             </span>
           </Button>
+        ) : isTaken ? (
+          myClaimCode ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-xs font-mono space-y-1">
+              <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>ВИ ЗАБРАЛИ ЦЕЙ ЕКСПОНАТ</span>
+              </div>
+              <div className="text-[11px] text-emerald-700 flex items-center justify-between">
+                <span>Чек: {myClaimCode}</span>
+                <button
+                  type="button"
+                  className="underline hover:text-carbon-pitch ml-2 cursor-pointer font-bold"
+                  onClick={() => onSelect?.(lot)}
+                >
+                  Квитанція
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-gallery-canvas border border-hairline-border text-xs font-mono space-y-1">
+              <div className="flex items-center gap-1.5 text-carbon-pitch font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>ЗАБРАНО ЗА {formatNumber(lot.final_price ?? lot.current_price)} ₴</span>
+              </div>
+              <div className="text-[11px] text-muted-steel">
+                Річ закріплена за покупцем. Повтор неможливий.
+              </div>
+            </div>
+          )
+        ) : isExpired ? (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full opacity-60 cursor-not-allowed"
+            disabled
+          >
+            СПУСК ЗАВЕРШЕНО
+          </Button>
+        ) : isScheduled ? (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full opacity-70 cursor-pointer"
+            onClick={() => onSelect?.(lot)}
+          >
+            СКОРО НА СПУСКУ
+          </Button>
+        ) : isCancelled ? (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full opacity-60 cursor-not-allowed"
+            disabled
+          >
+            СКАСОВАНО
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full opacity-70 cursor-pointer"
+            onClick={() => onSelect?.(lot)}
+          >
+            ПЕРЕГЛЯНУТИ ЕКСПОНАТ
+          </Button>
         )}
 
         <div className="text-[10px] font-mono text-muted-steel text-center uppercase tracking-kicker">
-          ЦІНА ТІЛЬКИ ПАДАЄ · ПЕРШИЙ ХТО ЗАБЕРЕ — ОТРИМУЄ РІЧ
+          {isActive
+            ? "ЦІНА ТІЛЬКИ ПАДАЄ · ПЕРШИЙ ХТО ЗАБЕРЕ — ОТРИМУЄ РІЧ"
+            : isTaken
+            ? "ЕКСПОНАТ ЗАКРІПЛЕНО В АРХІВІ · УГОДУ ЗАКРИТО"
+            : isExpired
+            ? "ДОСЯГНУТО МІНІМАЛЬНОЇ ЦІНИ · СПУСК ЗАКРИТО"
+            : "АРХІВНИЙ ФОНД VEILING · ОЧІКУЄ ЧЕРГИ СПУСКУ"}
         </div>
       </div>
     </div>

@@ -296,6 +296,7 @@ async def test_seed_s3_offline_graceful_fallback(
             file_data: bytes,
             content_type: str,
             prefix: str | None = None,
+            filename: str | None = None,
         ) -> tuple[str, str]:
             raise ConnectionError("MinIO is offline")
 

@@ -646,3 +646,48 @@ async def test_create_lot_price_digits_exceeded(
     payload_huge["start_price"] = "9999999999999.00"
     resp_huge = await client.post("/api/v1/lots", json=payload_huge, headers=headers)
     assert resp_huge.status_code == 422
+
+
+async def test_take_lot_full_purchase_flow(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    _, token = await create_user_with_role(
+        db_session,
+        "seller_flow@veiling.test",
+        UserRole.SELLER,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+    create_res = await client.post("/api/v1/lots", json=valid_lot_payload(), headers=headers)
+    assert create_res.status_code == 201
+    created_lot = create_res.json()
+    lot_id = created_lot["id"]
+
+    take_payload = {
+        "buyer_contact": "collector_kyiv@archive.ua",
+        "shipping_address": {
+            "recipient_name": "Taras Shevchenko",
+            "city": "Kyiv",
+            "address": "Khreshchatyk 22",
+            "country": "Ukraine",
+        },
+    }
+    take_res = await client.post(f"/api/v1/lots/{lot_id}/take", json=take_payload)
+    assert take_res.status_code == 200
+    take_data = take_res.json()
+    assert take_data["claim_code"].startswith("V-")
+    assert take_data["order"]["lot_id"] == lot_id
+    assert take_data["order"]["buyer_contact"] == "collector_kyiv@archive.ua"
+    assert take_data["order"]["shipping_address"]["recipient_name"] == "Taras Shevchenko"
+    assert take_data["order"]["shipping_address"]["city"] == "Kyiv"
+    assert take_data["order"]["status"] == "PAID"
+
+    lot_get = await client.get(f"/api/v1/lots/{lot_id}")
+    assert lot_get.status_code == 200
+    assert lot_get.json()["status"] == "TAKEN"
+    assert lot_get.json()["taken_at"] is not None
+    assert lot_get.json()["final_price"] == created_lot["start_price"]
+
+    second_take = await client.post(f"/api/v1/lots/{lot_id}/take", json=take_payload)
+    assert second_take.status_code == 409
+    assert second_take.json()["detail"] == "Цю річ уже забрав інший покупець"

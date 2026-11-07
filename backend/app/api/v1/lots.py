@@ -257,15 +257,29 @@ async def take_lot(
             payment_reference=payment_ref,
         )
         db.add(order)
-        try:
-            await db.commit()
-            await db.refresh(order)
-        except IntegrityError:
-            await db.rollback()
+        committed = False
+        for _ in range(3):
+            try:
+                await db.commit()
+                await db.refresh(order)
+                committed = True
+                break
+            except IntegrityError:
+                await db.rollback()
+                existing_order = await db.scalar(select(Order).where(Order.lot_id == lot.id))
+                if existing_order is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Цю річ уже забрав інший покупець",
+                    ) from None
+                order.claim_code = generate_claim_code()
+                db.add(order)
+
+        if not committed:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Цю річ уже забрав інший покупець",
-            ) from None
+            )
 
         lot_taken_event = LotTakenEvent(
             event="LOT_TAKEN",
@@ -278,6 +292,11 @@ async def take_lot(
             "auction_events",
             serialize_auction_event(lot_taken_event),
         )
+
+        with contextlib.suppress(Exception):
+            from app.tasks.auction import rebalance_auction_lots
+
+            await rebalance_auction_lots(db, now, target_active=6, max_closed=8)
 
         return TakeLotResponse(
             claim_code=order.claim_code,

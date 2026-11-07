@@ -1,4 +1,7 @@
+import contextlib
+import json
 import uuid
+from pathlib import Path
 from typing import Any
 
 import aioboto3
@@ -97,21 +100,42 @@ class S3Service:
             except ClientError:
                 await client.create_bucket(Bucket=self.bucket_name)
 
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "PublicReadGetObject",
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"],
+                    }
+                ],
+            }
+            with contextlib.suppress(Exception):
+                await client.put_bucket_policy(Bucket=self.bucket_name, Policy=json.dumps(policy))
+
     async def upload_image(
         self,
         file_data: bytes,
         content_type: str,
         prefix: str | None = None,
+        filename: str | None = None,
     ) -> tuple[str, str]:
         extension = self.validate_content_type(content_type)
-        file_id = uuid.uuid4()
-        filename = f"{file_id}{extension}"
+        if filename:
+            file_name_clean = Path(filename).name
+            if not file_name_clean.lower().endswith(extension):
+                file_name_clean = f"{file_name_clean}{extension}"
+        else:
+            file_id = uuid.uuid4()
+            file_name_clean = f"{file_id}{extension}"
 
         if prefix:
             clean_prefix = prefix.strip("/")
-            key = f"{clean_prefix}/{filename}"
+            key = f"{clean_prefix}/{file_name_clean}"
         else:
-            key = filename
+            key = file_name_clean
 
         async with self._get_client_context() as client:
             await client.put_object(

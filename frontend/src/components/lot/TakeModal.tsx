@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Lot } from "../../types";
 import { takeLot, TakeLotResponse } from "../../api/lots";
 import { Button } from "../ui/Button";
@@ -18,6 +18,7 @@ interface TakeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (takeResult: TakeLotResponse, lotId: string) => void;
+  onLotConflict?: (lotId: string) => void;
 }
 
 export const TakeModal: React.FC<TakeModalProps> = ({
@@ -25,6 +26,7 @@ export const TakeModal: React.FC<TakeModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
+  onLotConflict,
 }) => {
   const [buyerContact, setBuyerContact] = useState<string>("");
   const [recipientName, setRecipientName] = useState<string>("");
@@ -33,8 +35,31 @@ export const TakeModal: React.FC<TakeModalProps> = ({
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [conflictError, setConflictError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<TakeLotResponse | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen && lot) {
+      setErrorMessage(null);
+      setConflictError(null);
+      setSuccessData(null);
+      setIsLoading(false);
+      setIsCopied(false);
+    }
+  }, [isOpen, lot?.id]);
+
+  useEffect(() => {
+    if (isOpen && lot && !successData && !isLoading) {
+      if (lot.status === "TAKEN") {
+        setConflictError("Цю річ щойно забрав інший покупець");
+      } else if (lot.status === "EXPIRED") {
+        setConflictError("Час спуску лота вичерпано. Досягнуто мінімальної ціни.");
+      } else if (lot.status === "CANCELLED") {
+        setConflictError("Аукціон для цього експонату було скасовано.");
+      }
+    }
+  }, [isOpen, lot?.status, successData, isLoading]);
 
   if (!isOpen || !lot) {
     return null;
@@ -61,8 +86,12 @@ export const TakeModal: React.FC<TakeModalProps> = ({
 
   const handleExecuteTake = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!lot || isLoading) {
+      return;
+    }
     setIsLoading(true);
     setErrorMessage(null);
+    setConflictError(null);
 
     try {
       const response = await takeLot(lot.id, {
@@ -80,47 +109,31 @@ export const TakeModal: React.FC<TakeModalProps> = ({
     } catch (err: unknown) {
       const status =
         typeof err === "object" && err !== null && "response" in err
-          ? (err as { response?: { status?: number; data?: { detail?: string } } })
+          ? (err as { response?: { status?: number; data?: { detail?: unknown } } })
               .response?.status
           : null;
 
-      const detail =
+      const rawDetail =
         typeof err === "object" && err !== null && "response" in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data
+          ? (err as { response?: { data?: { detail?: unknown } } }).response?.data
               ?.detail
           : null;
 
+      let detailString: string | null = null;
+      if (typeof rawDetail === "string") {
+        detailString = rawDetail;
+      } else if (Array.isArray(rawDetail) && rawDetail.length > 0) {
+        detailString = rawDetail
+          .map((item: { msg?: string }) => item?.msg || String(item))
+          .join(", ");
+      }
+
       if (status === 409) {
-        setErrorMessage(detail || "Цю річ уже забрав інший покупець");
-        onSuccess(
-          {
-            claim_code: "",
-            order: {
-              id: "",
-              lot_id: lot.id,
-              claim_code: "",
-              final_price: lot.current_price,
-              savings_from_ceiling: 0,
-              savings_percentage: 0,
-              status: "PAID",
-              buyer_contact: "",
-              shipping_address: {
-                recipient_name: "",
-                phone: "",
-                city: "",
-                postal_code: "",
-                address_line: "",
-                country: "",
-              },
-              payment_reference: "",
-              created_at: new Date().toISOString(),
-            },
-          },
-          lot.id
-        );
+        setConflictError(detailString || "Цю річ уже забрав інший покупець");
+        onLotConflict?.(lot.id);
       } else {
         setErrorMessage(
-          detail || "Помилка при взятті лота. Спробуйте ще раз."
+          detailString || "Помилка при взятті лота. Будь ласка, спробуйте ще раз."
         );
       }
     } finally {
@@ -137,7 +150,7 @@ export const TakeModal: React.FC<TakeModalProps> = ({
             <span className="text-xs font-mono font-bold tracking-kicker uppercase text-carbon-pitch">
               {successData
                 ? "КВИТАНЦІЯ ЗАКРІПЛЕННЯ УГОДИ"
-                : errorMessage
+                : conflictError
                 ? "УВАГА: СТАТУС ЛОТА ЗМІНЕНО"
                 : "АТОМАРНЕ ВЗЯТТЯ ЛОТА"}
             </span>
@@ -230,12 +243,12 @@ export const TakeModal: React.FC<TakeModalProps> = ({
               </Button>
             </div>
           </div>
-        ) : errorMessage ? (
+        ) : conflictError ? (
           <div className="p-6 sm:p-8 space-y-6">
             <div className="p-4 bg-gallery-canvas border border-hairline-border space-y-2">
               <div className="flex items-center gap-2 text-carbon-pitch font-bold text-sm">
                 <AlertTriangle className="w-5 h-5 text-amber-600" />
-                <span>{errorMessage}</span>
+                <span>{conflictError}</span>
               </div>
               <p className="text-xs text-muted-steel leading-relaxed font-sans">
                 У голландському аукціоні VEILING кожен експонат існує в єдиному
@@ -250,7 +263,7 @@ export const TakeModal: React.FC<TakeModalProps> = ({
               className="w-full"
               onClick={onClose}
             >
-              ЗАКРИТИ
+              ЗАКРИТИ ТА ПОВЕРНУТИСЯ ДО КАТАЛОГУ
             </Button>
           </div>
         ) : (
@@ -271,6 +284,13 @@ export const TakeModal: React.FC<TakeModalProps> = ({
                 </span>
               </div>
             </div>
+
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 text-xs font-mono text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             <div className="space-y-4 pt-2 border-t border-hairline-border">
               <div>

@@ -943,6 +943,14 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
                         <img
                           src={photo.url}
                           alt={photo.caption}
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            const cleanUrl = photo.url.split("?")[0];
+                            const filename = cleanUrl.split("/").pop();
+                            if (filename && !target.src.endsWith(`/lots/${filename}`)) {
+                              target.src = `/lots/${filename}`;
+                            }
+                          }}
                           className="w-full h-full object-cover"
                         />
                         <span className="absolute top-1.5 left-1.5 bg-carbon-pitch text-pure-white font-mono text-[10px] px-1.5 py-0.5 font-bold">
@@ -1145,6 +1153,14 @@ export const SellerStudioPage: React.FC<SellerStudioPageProps> = ({
                     <img
                       src={photos[0].url}
                       alt="Прев'ю"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        const cleanUrl = photos[0].url.split("?")[0];
+                        const filename = cleanUrl.split("/").pop();
+                        if (filename && !target.src.endsWith(`/lots/${filename}`)) {
+                          target.src = `/lots/${filename}`;
+                        }
+                      }}
                       className="w-full h-full object-cover"
                     />
                   ) : (

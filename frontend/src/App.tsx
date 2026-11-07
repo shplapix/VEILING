@@ -1,21 +1,34 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
 import { Button } from "./components/ui/Button";
 import { SellerStudioPage } from "./pages/seller/SellerStudioPage";
 import { HomePage } from "./pages/HomePage";
-import { Lot } from "./types";
+import { AuctionWsEvent, Lot } from "./types";
 import { LotDetailPage } from "./pages/LotDetailPage";
 import { TakeModal } from "./components/lot/TakeModal";
 import { TakeLotResponse } from "./api/lots";
 import { ClaimLookupPage } from "./pages/ClaimLookupPage";
 import { LedgerPage } from "./pages/LedgerPage";
+import { useAuctionWs } from "./hooks/useAuctionWs";
+
+const CLAIM_CODES_STORAGE_KEY = "veiling_my_claim_codes";
+
+const loadSavedClaimCodes = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(CLAIM_CODES_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+};
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("falling");
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
   const [takingLot, setTakingLot] = useState<Lot | null>(null);
   const [claimCodeInput, setClaimCodeInput] = useState<string>("");
+  const [myClaimCodes, setMyClaimCodes] = useState<Record<string, string>>(loadSavedClaimCodes);
   const [lastTakenLot, setLastTakenLot] = useState<{
     lotId: string;
     finalPrice?: number;
@@ -42,7 +55,29 @@ export const App: React.FC = () => {
 
     if (takeResult.claim_code) {
       setClaimCodeInput(takeResult.claim_code);
+      setMyClaimCodes((prev) => {
+        const next = {
+          ...prev,
+          [lotId]: takeResult.claim_code,
+        };
+        try {
+          localStorage.setItem(CLAIM_CODES_STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          return next;
+        }
+        return next;
+      });
     }
+    setTakingLot((prev) =>
+      prev && prev.id === lotId
+        ? {
+            ...prev,
+            status: "TAKEN",
+            final_price: finalPrice ?? prev.current_price,
+            taken_at: takenAt,
+          }
+        : prev
+    );
     if (selectedLot && selectedLot.id === lotId) {
       setSelectedLot({
         ...selectedLot,
@@ -52,6 +87,53 @@ export const App: React.FC = () => {
       });
     }
   };
+
+  const handleLotConflict = (lotId: string) => {
+    setLastTakenLot({ lotId });
+    if (selectedLot && selectedLot.id === lotId) {
+      setSelectedLot({
+        ...selectedLot,
+        status: "TAKEN",
+      });
+    }
+  };
+
+  const handleWsEvent = useCallback((event: AuctionWsEvent) => {
+    if (event.event === "PRICE_TICK") {
+      setTakingLot((prev) =>
+        prev && prev.id === event.lot_id
+          ? {
+              ...prev,
+              current_price: event.current_price,
+              next_drop_at: event.next_drop_at,
+            }
+          : prev
+      );
+    } else if (event.event === "LOT_TAKEN") {
+      setTakingLot((prev) =>
+        prev && prev.id === event.lot_id
+          ? {
+              ...prev,
+              status: "TAKEN",
+              final_price: event.final_price,
+              taken_at: event.taken_at,
+            }
+          : prev
+      );
+    } else if (event.event === "LOT_EXPIRED") {
+      setTakingLot((prev) =>
+        prev && prev.id === event.lot_id
+          ? {
+              ...prev,
+              status: "EXPIRED",
+              current_price: event.floor_price,
+            }
+          : prev
+      );
+    }
+  }, []);
+
+  useAuctionWs(handleWsEvent);
 
   return (
     <div className="min-h-screen bg-gallery-canvas text-carbon-pitch flex flex-col font-sans">
@@ -63,6 +145,7 @@ export const App: React.FC = () => {
             initialLot={selectedLot}
             onBack={() => setSelectedLot(null)}
             onTake={handleTakeLot}
+            myClaimCode={myClaimCodes[selectedLot.id]}
           />
         ) : (
           <>
@@ -74,6 +157,7 @@ export const App: React.FC = () => {
                 onNavigateHowItWorks={() => setActiveTab("how-it-works")}
                 takingLotId={takingLot?.id}
                 lastTakenLot={lastTakenLot}
+                myClaimCodes={myClaimCodes}
               />
             )}
 
@@ -105,8 +189,9 @@ export const App: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-bold mb-2">Дискретне падіння</h3>
                 <p className="text-xs text-muted-steel leading-relaxed font-sans">
-                  Кожні 60 секунд ціна автоматично знижується на фіксований
-                  крок. Публічний таймер показує секунди до наступного падіння.
+                  Через встановлені інтервали ціна автоматично знижується на
+                  фіксований крок. Публічний таймер показує секунди до наступного
+                  падіння.
                 </p>
               </div>
               <div className="bg-pure-white border border-hairline-border p-8">
@@ -178,6 +263,7 @@ export const App: React.FC = () => {
         isOpen={Boolean(takingLot)}
         onClose={() => setTakingLot(null)}
         onSuccess={handleTakeSuccess}
+        onLotConflict={handleLotConflict}
       />
 
       <Footer />

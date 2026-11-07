@@ -857,4 +857,620 @@ ARCHIVE_EXHIBITS: list[ArchiveExhibit] = [
             ),
         ],
     ),
+    ArchiveExhibit(
+        title='Військова парка Walter Van Beirendonck AW95 "Wild & Lethal Trash" Alien Parka',
+        brand="Walter Van Beirendonck",
+        designer="Walter Van Beirendonck",
+        season="Autumn/Winter",
+        year=1995,
+        collection_name="Wild & Lethal Trash",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Технічна парка",
+        tagged_size="50",
+        fits_like="Oversized L",
+        measurements={
+            "pit_to_pit": 66.0,
+            "length": 86.0,
+            "shoulders": 54.0,
+            "sleeve": 66.0,
+        },
+        materials={
+            "shell": "100% прогумований технічний нейлон Ripstop з голографічним покриттям W&LT",
+            "lining": "Стьобана термопідкладка з неопреновими вставками",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Ідеальний архівний стан збереження. Голографічний блиск покриття "
+            "збережено рівномірно по всій довжині полотна."
+        ),
+        country_of_origin="Зроблено в Італії",
+        provenance_notes=(
+            "Оригінальний подіумний експонат показу W&LT AW1995 у Парижі. "
+            "Збережено у приватній колекції Брюсселя."
+        ),
+        seller_location="Антверпен, Бельгія",
+        shipping_notes="Застрахована музейна кур'єрська доставка з персональним супроводом (3–5 днів).",
+        start_price=Decimal("110000.00"),
+        floor_price=Decimal("70000.00"),
+        step_amount=Decimal("1000.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="walter_wlt_aw95_alien_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс неонової голографічної парки з логотипом Puk-Puk",
+            ),
+            SeedImageSpec(
+                filename="walter_wlt_aw95_alien_detail.jpg",
+                sort_order=1,
+                caption="Деталь голографічного термопокриття та масивних гумових патчів W&LT",
+            ),
+            SeedImageSpec(
+                filename="walter_wlt_aw95_alien_macro.jpg",
+                sort_order=2,
+                caption="Макро-структура водовідштовхувального нейлону ріпстоп з металевою ниткою",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Худі без рукавів Raf Simons SS02 "Woe Onto Those" Sleeveless Hoodie',
+        brand="Raf Simons",
+        designer="Raf Simons",
+        season="Spring/Summer",
+        year=2002,
+        collection_name="Woe Onto Those Who Spit On The Fear Generation",
+        category=LotCategory.TOPS,
+        subcategory="Архівне худі",
+        tagged_size="One Size",
+        fits_like="Oversized XL",
+        measurements={
+            "pit_to_pit": 68.0,
+            "length": 74.0,
+            "shoulders": 56.0,
+            "sleeve": 24.0,
+        },
+        materials={
+            "fleece": "100% важкий вибілений французький футер french terry щільністю 480 г/м²",
+            "print": "Шовкотрафаретний принт антивоєнного маніфесту графітовим пігментом",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Культовий експонат колекції SS02. Фабричне состарювання горловини "
+            "та краю капюшона без сторонніх дефектів."
+        ),
+        country_of_origin="Зроблено в Бельгії",
+        provenance_notes=(
+            "Придбано на аукціоні ранніх робіт Рафа Сімонса в Генті. "
+            "Повний архівний комплект сертифікатів автентичності."
+        ),
+        seller_location="Брюссель, Бельгія",
+        shipping_notes="Спеціальна захищена експрес-доставка у вакуумному чохлі (2–4 дні).",
+        start_price=Decimal("95000.00"),
+        floor_price=Decimal("62000.00"),
+        step_amount=Decimal("800.00"),
+        interval_seconds=50,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="raf_simons_ss02_woe_front.jpg",
+                sort_order=0,
+                caption="Фронтальний оверсайз-силует білого худі без рукавів з капюшоном-куполом",
+            ),
+            SeedImageSpec(
+                filename="raf_simons_ss02_woe_detail.jpg",
+                sort_order=1,
+                caption="Макро-ракурс графічного маніфесту показу SS02 та вінтажних потертостей",
+            ),
+            SeedImageSpec(
+                filename="raf_simons_ss02_woe_macro.jpg",
+                sort_order=2,
+                caption="Деталь необробленого зрізу пройми рукава та важкого бавовняного плетіння",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Архівна туніка Alexander McQueen SS99 "No. 13" Spray Silhouette',
+        brand="Alexander McQueen",
+        designer="Alexander McQueen",
+        season="Spring/Summer",
+        year=1999,
+        collection_name="No. 13",
+        category=LotCategory.TOPS,
+        subcategory="Подіумна туніка",
+        tagged_size="40 IT",
+        fits_like="Slim M",
+        measurements={
+            "pit_to_pit": 48.0,
+            "length": 92.0,
+            "shoulders": 42.0,
+            "sleeve": 58.0,
+        },
+        materials={
+            "cotton": "100% багатошаровий бавовняний муслін найтоншого ручного плетіння",
+            "pigment": "Акриловий балонний розпил неоново-жовтого та чорного пігментів",
+        },
+        condition_rating=10,
+        condition_details=(
+            "Музейний студійний експонат без ознак носіння. "
+            "Пігментний розпил зберіг повну яскравість і первинний контраст."
+        ),
+        country_of_origin="Зроблено у Великій Британії",
+        provenance_notes=(
+            "Походить із приватної студійної колекції лондонського стиліста "
+            "показу Alexander McQueen SS99 No. 13."
+        ),
+        seller_location="Лондон, Велика Британія",
+        shipping_notes="Музейна застрахована кур'єрська доставка у дерев'яному кейсі (3–5 днів).",
+        start_price=Decimal("160000.00"),
+        floor_price=Decimal("105000.00"),
+        step_amount=Decimal("1200.00"),
+        interval_seconds=55,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="mcqueen_ss99_no13_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс білої муслінової туніки з робототехнічним розпилом фарби",
+            ),
+            SeedImageSpec(
+                filename="mcqueen_ss99_no13_detail.jpg",
+                sort_order=1,
+                caption="Деталь хаотичного нанесення чорного та неонового пігменту на подолі",
+            ),
+            SeedImageSpec(
+                filename="mcqueen_ss99_no13_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс невагомого бавовняного полотна з автентичним внутрішнім ярликом",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Сітчастий лонгслів Jean Paul Gaultier AW95 "Cyber Dot" Op-Art Top',
+        brand="Jean Paul Gaultier",
+        designer="Jean Paul Gaultier",
+        season="Autumn/Winter",
+        year=1995,
+        collection_name="Cyber Collection",
+        category=LotCategory.TOPS,
+        subcategory="Сітчастий лонгслів",
+        tagged_size="M",
+        fits_like="Stretchy M",
+        measurements={
+            "pit_to_pit": 46.0,
+            "length": 64.0,
+            "shoulders": 40.0,
+            "sleeve": 62.0,
+        },
+        materials={
+            "mesh": "100% ультраеластичний поліамід з оптичним кібернетичним принтом кіл",
+            "finish": "Тонка обробка швів делікатним оверлоком шовковою ниткою",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Еластичність сітки повністю збережена, без затяжок "
+            "чи деформацій оптичних кіл геометричного візерунка."
+        ),
+        country_of_origin="Зроблено в Італії",
+        provenance_notes=(
+            "Оригінальний реліз легендарної лінійки JPG Cyber 1995 року "
+            "з паризького вінтажного бутика на Rue Cambon."
+        ),
+        seller_location="Париж, Франція",
+        shipping_notes="Застрахована експрес-доставка у фірмовому пакуванні (2–4 дні).",
+        start_price=Decimal("75000.00"),
+        floor_price=Decimal("48000.00"),
+        step_amount=Decimal("650.00"),
+        interval_seconds=40,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="jpg_aw95_cyber_front.jpg",
+                sort_order=0,
+                caption="Фронтальний вигляд оп-арт лонгсліва з кібернетичними оптичними точками",
+            ),
+            SeedImageSpec(
+                filename="jpg_aw95_cyber_detail.jpg",
+                sort_order=1,
+                caption="Деталь анатомічної ілюзії рельєфу тіла створеної оптичною графікою",
+            ),
+            SeedImageSpec(
+                filename="jpg_aw95_cyber_macro.jpg",
+                sort_order=2,
+                caption="Макро-структура мікросітки поліаміду та шовкового внутрішнього ярлика JPG",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Мілітарі парка Dries Van Noten AW14 Back-Zip Military Parka",
+        brand="Dries Van Noten",
+        designer="Dries Van Noten",
+        season="Autumn/Winter",
+        year=2014,
+        collection_name="Rave & Military",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Архівна парка",
+        tagged_size="48",
+        fits_like="Relaxed 48",
+        measurements={
+            "pit_to_pit": 62.0,
+            "length": 94.0,
+            "shoulders": 52.0,
+            "sleeve": 66.0,
+        },
+        materials={
+            "cotton": "100% щільна водовідштовхувальна бавовняна саржа глибокого оливкового кольору",
+            "hardware": "Масивні металеві блискавки Lampo вздовж усієї лінії спини та рукавів",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Відмінний стан збереження. Блискавки спинки працюють плавно, "
+            "фурнітура з антикорозійним чорнінням без оксидації."
+        ),
+        country_of_origin="Зроблено в Бельгії",
+        provenance_notes=(
+            "Один із найбажаніших предметів показу Дріса Ван Нотена AW14 "
+            "з антверпенського флагмана бренду Het Modepaleis."
+        ),
+        seller_location="Антверпен, Бельгія",
+        shipping_notes="Кур'єрська доставка з персональним номером відстеження (3–5 днів).",
+        start_price=Decimal("85000.00"),
+        floor_price=Decimal("54000.00"),
+        step_amount=Decimal("750.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="dries_aw14_backzip_front.jpg",
+                sort_order=0,
+                caption="Фронтальний класичний мілітарі-силует парки M-51 у трактуванні Dries Van Noten",
+            ),
+            SeedImageSpec(
+                filename="dries_aw14_backzip_detail.jpg",
+                sort_order=1,
+                caption="Деталь розстібної центральної металевої блискавки по всій лінії спинки",
+            ),
+            SeedImageSpec(
+                filename="dries_aw14_backzip_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс щільного діагонального саржевого плетіння тканини оливкового відтінку",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Скульптурний жилет Craig Green SS15 Wood Sculpture Vest",
+        brand="Craig Green",
+        designer="Craig Green",
+        season="Spring/Summer",
+        year=2015,
+        collection_name="Silent Sculptures",
+        category=LotCategory.TOPS,
+        subcategory="Скульптурний жилет",
+        tagged_size="M/L",
+        fits_like="Adjustable M-L",
+        measurements={
+            "pit_to_pit": 54.0,
+            "length": 68.0,
+            "shoulders": 46.0,
+            "sleeve": 15.0,
+        },
+        materials={
+            "canvas": "100% виварена бавовняна парусина з довгими стрічками-фіксаторами",
+            "wood": "Поліровані вручну дерев'яні конструктивні планки з натуральної вільхи",
+        },
+        condition_rating=10,
+        condition_details=(
+            "Музейна інсталяційна кондиція. Дерев'яні елементи без тріщин "
+            "чи дефектів, бавовняні зав'язки цілісні."
+        ),
+        country_of_origin="Зроблено у Великій Британії",
+        provenance_notes=(
+            "Оригінальний подіумний жилет сезону SS15, "
+            "що сформував естетичний канон раннього Крейга Гріна."
+        ),
+        seller_location="Лондон, Велика Британія",
+        shipping_notes="Захисна броньована доставка у спеціальному жорсткому контейнері (3–6 днів).",
+        start_price=Decimal("92000.00"),
+        floor_price=Decimal("58000.00"),
+        step_amount=Decimal("850.00"),
+        interval_seconds=50,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="craig_green_ss15_wood_front.jpg",
+                sort_order=0,
+                caption="Фронтальний концептуальний вигляд білого парусинового жилета з дерев'яними планками",
+            ),
+            SeedImageSpec(
+                filename="craig_green_ss15_wood_detail.jpg",
+                sort_order=1,
+                caption="Деталь фіксації дерев'яної скульптурної рами довгими бавовняними стропами",
+            ),
+            SeedImageSpec(
+                filename="craig_green_ss15_wood_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс шліфованої деревини вільхи та ручних стібків кріплення",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Металізований пуховик Prada Sport AW99 Linea Rossa Puffer",
+        brand="Prada Sport",
+        designer="Miuccia Prada",
+        season="Autumn/Winter",
+        year=1999,
+        collection_name="Linea Rossa Technical",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Технічний пуховик",
+        tagged_size="50",
+        fits_like="Boxy L",
+        measurements={
+            "pit_to_pit": 64.0,
+            "length": 70.0,
+            "shoulders": 54.0,
+            "sleeve": 67.0,
+        },
+        materials={
+            "nylon": "100% дзеркально-металізований нейлон з водовідштовхувальною мембраною",
+            "down": "90% натуральний білий гусячий пух, 10% добірне перо високого ступеня очищення",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Рідкісний сріблястий нейлон без заломів і потертостей, "
+            "культовий латексний червоний логотип Linea Rossa на зап'ясті в ідеалі."
+        ),
+        country_of_origin="Зроблено в Італії",
+        provenance_notes=(
+            "Еталонний зразок технічного мінімалізму Prada кінця 1990-х "
+            "із міланського приватного сховища спортивної спадщини."
+        ),
+        seller_location="Мілан, Італія",
+        shipping_notes="Страхована експрес-доставка у спеціальному чохлі Linea Rossa (3–5 днів).",
+        start_price=Decimal("115000.00"),
+        floor_price=Decimal("76000.00"),
+        step_amount=Decimal("1100.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="prada_sport_aw99_puffer_front.jpg",
+                sort_order=0,
+                caption="Фронтальний ракурс сріблястого пуховика з характерним дзеркальним відблиском",
+            ),
+            SeedImageSpec(
+                filename="prada_sport_aw99_puffer_detail.jpg",
+                sort_order=1,
+                caption="Деталь червоного латексного лейбла Prada Linea Rossa на правому манжеті",
+            ),
+            SeedImageSpec(
+                filename="prada_sport_aw99_puffer_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс мембранного покриття та брендованого бігунка блискавки Prada riri",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title='Бондажні штани Helmut Lang SS04 "Bondage" Multi-Strap Cargo',
+        brand="Helmut Lang",
+        designer="Helmut Lang",
+        season="Spring/Summer",
+        year=2004,
+        collection_name="Bondage Flight Collection",
+        category=LotCategory.BOTTOMS,
+        subcategory="Бондажні карго",
+        tagged_size="48 (W32)",
+        fits_like="Slim Straight W32",
+        measurements={
+            "waist": 42.0,
+            "length": 106.0,
+            "inseam": 81.0,
+            "hem": 20.0,
+        },
+        materials={
+            "twill": "100% легка військова бавовняна саржа кольору графіт",
+            "straps": "Нейлонові еластичні ремені-бондажі з матовими карабінами D-ring",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Усі автентичні внутрішні та зовнішні еластичні ремені зберегли "
+            "початкову пружність, фурнітура повністю оригінальна."
+        ),
+        country_of_origin="Зроблено в Італії",
+        provenance_notes=(
+            "Останній великий весняно-літній показ самого Гельмута Ланга "
+            "перед відходом із власного дому моди."
+        ),
+        seller_location="Відень, Австрія",
+        shipping_notes="Швидка застрахована кур'єрська доставка по всій Європі (2–4 дні).",
+        start_price=Decimal("88000.00"),
+        floor_price=Decimal("55000.00"),
+        step_amount=Decimal("800.00"),
+        interval_seconds=40,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="helmut_lang_ss04_bondage_front.jpg",
+                sort_order=0,
+                caption="Фронтальний вигляд темно-графітових штанів з перехресними бондажними стропами",
+            ),
+            SeedImageSpec(
+                filename="helmut_lang_ss04_bondage_detail.jpg",
+                sort_order=1,
+                caption="Деталь регульованих карабінів та кріплень еластичних стрічок під коліном",
+            ),
+            SeedImageSpec(
+                filename="helmut_lang_ss04_bondage_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс фактури військової саржі та чорного шкіряного патча Helmut Lang",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Шкіряні черевики Boris Bidjan Saberi SS16 Object-Dyed Boots",
+        brand="Boris Bidjan Saberi",
+        designer="Boris Bidjan Saberi",
+        season="Spring/Summer",
+        year=2016,
+        collection_name="Post-Human Nomad",
+        category=LotCategory.FOOTWEAR,
+        subcategory="Авангардні черевики",
+        tagged_size="43",
+        fits_like="True to size 43",
+        measurements={
+            "sole_length": 31.0,
+            "sole_width": 11.5,
+            "shaft_height": 22.0,
+            "heel_height": 3.5,
+        },
+        materials={
+            "leather": "100% кінська шкіра рослинного дублення з фарбуванням у готовому виробі",
+            "sole": "Багатошарова шкіряна підошва з гумовою профілактикою Vibram",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Глибоке нерівномірне оксидне фарбування, підошва практично "
+            "без слідів зносу, оригінальні вощені довгі шнурки."
+        ),
+        country_of_origin="Зроблено в Іспанії",
+        provenance_notes=(
+            "Ручна робота ательє Boris Bidjan Saberi у Барселоні "
+            "з персональним підписом та номером майстра."
+        ),
+        seller_location="Барселона, Іспанія",
+        shipping_notes="Застрахована експрес-доставка у важкій фірмовій коробці BBS (3–5 днів).",
+        start_price=Decimal("98000.00"),
+        floor_price=Decimal("64000.00"),
+        step_amount=Decimal("900.00"),
+        interval_seconds=50,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="bbs_ss16_boots_front.jpg",
+                sort_order=0,
+                caption="Профільний ракурс авангардних шкіряних черевиків з анатомічною колодкою",
+            ),
+            SeedImageSpec(
+                filename="bbs_ss16_boots_detail.jpg",
+                sort_order=1,
+                caption="Деталь оксидного нерівномірного фарбування та срібних наконечників шнурків .925",
+            ),
+            SeedImageSpec(
+                filename="bbs_ss16_boots_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс товстої кінської шкіри з масляним фінішем та прошивки Goodyear",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Артизанальний пробковий клатч Maison Margiela SS99 Cork Bag",
+        brand="Maison Margiela",
+        designer="Martin Margiela",
+        season="Spring/Summer",
+        year=1999,
+        collection_name="Ligne 0 Artisanal",
+        category=LotCategory.ACCESSORIES,
+        subcategory="Артизанальний клатч",
+        tagged_size="One Size",
+        fits_like="Medium Clutch",
+        measurements={
+            "length": 32.0,
+            "width": 18.0,
+            "depth": 7.0,
+            "strap_drop": 25.0,
+        },
+        materials={
+            "cork": "100% натуральна пресована кора португальського коркового дуба ручного збирання",
+            "leather": "Внутрішня підкладка з найтоншої білої шкіри ягняти ручного фарбування",
+        },
+        condition_rating=10,
+        condition_details=(
+            "Бездоганна колекційна схоронність артефакту лінії 0 Artisanal "
+            "з фірмовими чотирма білими стібками на звороті."
+        ),
+        country_of_origin="Зроблено у Франції",
+        provenance_notes=(
+            "Створено вручну в паризькому ательє на Rue Saint-Maur "
+            "для показу кутюрної лінії сезону SS1999."
+        ),
+        seller_location="Париж, Франція",
+        shipping_notes="Особлива дбайлива доставка в амортизаційному музейному кейсі (2–4 дні).",
+        start_price=Decimal("125000.00"),
+        floor_price=Decimal("82000.00"),
+        step_amount=Decimal("1100.00"),
+        interval_seconds=45,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="margiela_ss99_cork_front.jpg",
+                sort_order=0,
+                caption="Фронтальний вигляд клатча з фактурної пресованої кори коркового дуба",
+            ),
+            SeedImageSpec(
+                filename="margiela_ss99_cork_detail.jpg",
+                sort_order=1,
+                caption="Деталь чотирьох білих знакових стібків Maison Martin Margiela на зворотному боці",
+            ),
+            SeedImageSpec(
+                filename="margiela_ss99_cork_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс пористої структури натурального корка та білої шкіряної підкладки",
+            ),
+        ],
+    ),
+    ArchiveExhibit(
+        title="Шкіряний жилет Chrome Hearts Vintage Silver Cross Dagger Vest",
+        brand="Chrome Hearts",
+        designer="Richard Stark",
+        season="Autumn/Winter",
+        year=1998,
+        collection_name="Custom Leather Vault",
+        category=LotCategory.OUTERWEAR,
+        subcategory="Шкіряний жилет",
+        tagged_size="L",
+        fits_like="Tailored L",
+        measurements={
+            "pit_to_pit": 56.0,
+            "length": 62.0,
+            "shoulders": 44.0,
+            "sleeve": 12.0,
+        },
+        materials={
+            "leather": "100% важка зерниста коров'яча шкіра найвищого ґатунку heavyweight steerhide",
+            "silver": "Фурнітура та хрести ручного лиття зі срібла 925 проби Sterling Silver",
+        },
+        condition_rating=9,
+        condition_details=(
+            "Шкіра набула благородної вінтажної патини, усі срібні деталі "
+            "з автентичними таврами лос-анджелеської майстерні без пошкоджень."
+        ),
+        country_of_origin="Зроблено в США",
+        provenance_notes=(
+            "Індивідуальне замовлення в майстерні Chrome Hearts у Голлівуді "
+            "кінця 1990-х років. Повний комплект документів."
+        ),
+        seller_location="Лос-Анджелес, США",
+        shipping_notes="Застрахована броньована міжнародна кур'єрська доставка (3–6 днів).",
+        start_price=Decimal("195000.00"),
+        floor_price=Decimal("135000.00"),
+        step_amount=Decimal("1500.00"),
+        interval_seconds=60,
+        status=LotStatus.DRAFT,
+        images=[
+            SeedImageSpec(
+                filename="chrome_hearts_vest_front.jpg",
+                sort_order=0,
+                caption="Фронтальний силует важкого шкіряного жилета зі срібними ґудзиками-хрестами",
+            ),
+            SeedImageSpec(
+                filename="chrome_hearts_vest_detail.jpg",
+                sort_order=1,
+                caption="Деталь масивного срібного бігунка у формі кинджала Dagger на бічній кишені",
+            ),
+            SeedImageSpec(
+                filename="chrome_hearts_vest_macro.jpg",
+                sort_order=2,
+                caption="Макро-ракурс зернистої бичачої шкіри та шовкової підкладки з монограмами CH",
+            ),
+        ],
+    ),
 ]

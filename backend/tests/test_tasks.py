@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.enums import LotCategory, LotStatus
@@ -215,3 +215,130 @@ def test_ws_event_datetime_format_z_suffix() -> None:
     expired_dict = expired_event.to_dict()
     assert iso_pattern.match(str(expired_dict["expired_at"]))
     assert str(expired_dict["expired_at"]) == "2026-10-24T18:05:00Z"
+
+
+async def test_bump_overflow_closed_lots_cap_at_eight(
+    db_session: AsyncSession,
+) -> None:
+    from app.tasks.auction import bump_overflow_closed_lots
+
+    now = datetime.now(UTC)
+    lots: list[Lot] = []
+    for i in range(10):
+        lot = await _create_active_lot(
+            db_session,
+            status=LotStatus.EXPIRED,
+            current_price=Decimal("50000.00"),
+            floor_price=Decimal("50000.00"),
+        )
+        lot.updated_at = now - timedelta(minutes=(10 - i) * 5)
+        lots.append(lot)
+    await db_session.commit()
+
+    bumped = await bump_overflow_closed_lots(db_session, now, max_closed=8)
+    assert bumped == 2
+
+    query_closed = (
+        select(Lot)
+        .where(Lot.status.in_([LotStatus.EXPIRED, LotStatus.TAKEN]))
+        .order_by(Lot.updated_at.desc())
+    )
+    closed_after = list((await db_session.execute(query_closed)).scalars().all())
+    assert len(closed_after) == 8
+
+    query_draft = select(Lot).where(Lot.status == LotStatus.DRAFT)
+    draft_after = list((await db_session.execute(query_draft)).scalars().all())
+    assert len(draft_after) == 2
+    for d_lot in draft_after:
+        assert d_lot.current_price == d_lot.start_price
+        assert d_lot.started_at is None
+        assert d_lot.next_drop_at is None
+        assert d_lot.taken_at is None
+        assert d_lot.winner_id is None
+        assert d_lot.final_price is None
+
+
+async def test_rebalance_and_fifo_rotation_active_to_closed_to_queue(
+    db_session: AsyncSession,
+) -> None:
+    from app.tasks.auction import rebalance_auction_lots
+
+    now = datetime.now(UTC)
+    active_lots: list[Lot] = []
+    for _ in range(5):
+        lot = await _create_active_lot(
+            db_session,
+            status=LotStatus.ACTIVE,
+            current_price=Decimal("80000.00"),
+        )
+        active_lots.append(lot)
+
+    closed_lots: list[Lot] = []
+    for i in range(9):
+        lot = await _create_active_lot(
+            db_session,
+            status=LotStatus.EXPIRED,
+            current_price=Decimal("50000.00"),
+            floor_price=Decimal("50000.00"),
+        )
+        lot.updated_at = now - timedelta(minutes=(10 - i) * 5)
+        closed_lots.append(lot)
+
+    queue_lot = await _create_active_lot(
+        db_session,
+        status=LotStatus.DRAFT,
+        current_price=Decimal("100000.00"),
+    )
+    queue_lot.updated_at = now - timedelta(hours=2)
+    await db_session.commit()
+
+    result = await rebalance_auction_lots(db_session, now, target_active=6, max_closed=8)
+    assert result["bumped"] == 1
+    assert result["activated"] == 1
+
+    query_active = select(func.count(Lot.id)).where(Lot.status == LotStatus.ACTIVE)
+    active_count = (await db_session.execute(query_active)).scalar_one()
+    assert active_count == 6
+
+    query_closed = select(func.count(Lot.id)).where(
+        Lot.status.in_([LotStatus.EXPIRED, LotStatus.TAKEN])
+    )
+    closed_count = (await db_session.execute(query_closed)).scalar_one()
+    assert closed_count == 8
+
+    await db_session.refresh(queue_lot)
+    assert queue_lot.status == LotStatus.ACTIVE
+    assert queue_lot.current_price == queue_lot.start_price
+
+
+async def test_bump_overflow_closed_lots_preserves_taken_lots(
+    db_session: AsyncSession,
+) -> None:
+    from app.tasks.auction import bump_overflow_closed_lots
+
+    now = datetime.now(UTC)
+    for i in range(8):
+        lot = await _create_active_lot(
+            db_session,
+            status=LotStatus.EXPIRED,
+            current_price=Decimal("50000.00"),
+            floor_price=Decimal("50000.00"),
+        )
+        lot.updated_at = now - timedelta(minutes=(8 - i) * 5)
+
+    taken_lot = await _create_active_lot(
+        db_session,
+        status=LotStatus.TAKEN,
+        current_price=Decimal("70000.00"),
+    )
+    taken_lot.taken_at = now - timedelta(hours=1)
+    taken_lot.final_price = Decimal("70000.00")
+    await db_session.commit()
+
+    bumped = await bump_overflow_closed_lots(db_session, now, max_closed=8)
+    assert bumped == 0
+
+    await db_session.refresh(taken_lot)
+    assert taken_lot.status == LotStatus.TAKEN
+    assert taken_lot.taken_at is not None
+    assert taken_lot.final_price == Decimal("70000.00")

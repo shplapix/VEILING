@@ -14,6 +14,7 @@ interface HomePageProps {
   onNavigateHowItWorks: () => void;
   takingLotId?: string | null;
   lastTakenLot?: { lotId: string; finalPrice?: number; takenAt?: string } | null;
+  myClaimCodes?: Record<string, string>;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -23,6 +24,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigateHowItWorks,
   takingLotId,
   lastTakenLot,
+  myClaimCodes,
 }) => {
   const [lots, setLots] = useState<Lot[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -74,12 +76,13 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ...l,
                 status: "TAKEN",
                 final_price: event.final_price,
-                taken_at: event.taken_at,
+                taken_at: event.taken_at || new Date().toISOString(),
+                updated_at: event.taken_at || new Date().toISOString(),
               }
             : l
         )
       );
-      setTimeout(() => fetchLots(false), 2000);
+      setTimeout(() => fetchLots(false), 1500);
     } else if (event.event === "LOT_EXPIRED") {
       setLots((prev) =>
         prev.map((l) =>
@@ -88,11 +91,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ...l,
                 status: "EXPIRED",
                 current_price: event.floor_price,
+                updated_at: event.expired_at || new Date().toISOString(),
               }
             : l
         )
       );
-      setTimeout(() => fetchLots(false), 2000);
+      setTimeout(() => fetchLots(false), 1500);
     }
   }, [fetchLots]);
 
@@ -129,11 +133,22 @@ export const HomePage: React.FC<HomePageProps> = ({
           : l
       )
     );
-  }, [lastTakenLot]);
+    const timer = setTimeout(() => {
+      fetchLots(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [lastTakenLot, fetchLots]);
 
   const activeLots = lots.filter((l) => l.status === "ACTIVE");
-  const otherLots = lots.filter((l) => l.status !== "ACTIVE");
-  const displayLots = activeLots.length > 0 ? activeLots : lots;
+  const closedLots = lots
+    .filter((l) => l.status === "EXPIRED" || l.status === "TAKEN")
+    .sort((a, b) => {
+      const timeA = new Date(a.taken_at || a.updated_at || a.created_at).getTime();
+      const timeB = new Date(b.taken_at || b.updated_at || b.created_at).getTime();
+      return timeB - timeA;
+    })
+    .slice(0, 8);
+  const displayLots = activeLots;
 
   const calculateRemainingSeconds = (nextDropAt?: string | null): number | null => {
     if (!nextDropAt) {
@@ -249,28 +264,35 @@ export const HomePage: React.FC<HomePageProps> = ({
                 onSelect={onSelectLot}
                 onTake={onTakeLot}
                 isTaking={takingLotId === lot.id}
+                myClaimCode={myClaimCodes?.[lot.id]}
               />
             ))}
           </div>
         )}
 
-        {activeLots.length > 0 && otherLots.length > 0 && (
+        {closedLots.length > 0 && (
           <div className="mt-16 pt-8 border-t border-hairline-border space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold tracking-tight">
-                Нещодавні архівні експонати
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-bold tracking-tight">
+                  Нещодавні архівні експонати
+                </h3>
+                <p className="text-xs text-muted-steel font-mono mt-1 uppercase tracking-kicker">
+                  {closedLots.length} {closedLots.length === 1 ? "ОСТАННІЙ ЗАКРИТИЙ ЕКСПОНАТ" : "ОСТАННІХ ЗАКРИТИХ ЕКСПОНАТІВ"}
+                </p>
+              </div>
               <span className="text-xs font-mono text-muted-steel uppercase tracking-kicker">
-                ЗАКРИТІ СПУСКИ
+                ЗАКРИТІ СПУСКИ (МАКС. 8)
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {otherLots.map((lot) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {closedLots.map((lot) => (
                 <LiveAuctionCard
                   key={lot.id}
                   lot={lot}
                   onSelect={onSelectLot}
                   onTake={onTakeLot}
+                  myClaimCode={myClaimCodes?.[lot.id]}
                 />
               ))}
             </div>
@@ -306,8 +328,9 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
               <h3 className="text-lg font-bold mb-2">Дискретне падіння</h3>
               <p className="text-xs text-muted-steel leading-relaxed font-sans">
-                Кожні 60 секунд ціна автоматично падає на фіксований крок. Публічний
-                таймер відраховує секунди до наступного зниження.
+                Через встановлені інтервали ціна автоматично знижується на
+                фіксований крок. Публічний таймер показує секунди до наступного
+                падіння.
               </p>
             </div>
             <div className="bg-pure-white border border-hairline-border p-8">

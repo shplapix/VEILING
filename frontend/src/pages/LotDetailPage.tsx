@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Lot, AuctionWsEvent } from "../types";
+import { getLot } from "../api/lots";
 import { useAuctionWs } from "../hooks/useAuctionWs";
 import { PhotoGallery } from "../components/lot/PhotoGallery";
 import { SpecsAccordion } from "../components/lot/SpecsAccordion";
@@ -14,6 +15,7 @@ interface LotDetailPageProps {
   onBack: () => void;
   onTake: (lot: Lot) => void;
   isTaking?: boolean;
+  myClaimCode?: string;
 }
 
 export const LotDetailPage: React.FC<LotDetailPageProps> = ({
@@ -21,6 +23,7 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
   onBack,
   onTake,
   isTaking = false,
+  myClaimCode,
 }) => {
   const [lot, setLot] = useState<Lot>(initialLot);
   const [now, setNow] = useState<number>(Date.now());
@@ -58,6 +61,13 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
 
   useEffect(() => {
     setLot(initialLot);
+    getLot(initialLot.id)
+      .then((fresh) => {
+        if (fresh) {
+          setLot(fresh);
+        }
+      })
+      .catch(() => {});
   }, [initialLot]);
 
   useEffect(() => {
@@ -133,12 +143,20 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
                 <span className="text-xs font-mono font-bold uppercase tracking-kicker text-muted-steel">
                   АРХІВ {lot.category} · {lot.brand}
                 </span>
-                {isTaken ? (
-                  <Badge variant="lime">ЗАБРАНО</Badge>
+                {isActive ? (
+                  <Badge variant="blue">LIVE СПУСК</Badge>
+                ) : isTaken ? (
+                  <Badge variant="lime">
+                    {myClaimCode ? "ЗАКРІПЛЕНО ЗА ВАМИ" : "ЗАБРАНО"}
+                  </Badge>
                 ) : isExpired ? (
                   <Badge variant="carbon">ПІДЛОГА</Badge>
+                ) : lot.status === "SCHEDULED" ? (
+                  <Badge variant="carbon">СКОРО</Badge>
+                ) : lot.status === "CANCELLED" ? (
+                  <Badge variant="carbon">СКАСОВАНО</Badge>
                 ) : (
-                  <Badge variant="blue">LIVE СПУСК</Badge>
+                  <Badge variant="carbon">В РЕЗЕРВІ</Badge>
                 )}
               </div>
 
@@ -188,27 +206,7 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
             </div>
 
             <div className="pt-2 space-y-3">
-              {isTaken ? (
-                <div className="p-4 bg-gallery-canvas border border-hairline-border text-xs font-mono space-y-2">
-                  <div className="flex items-center gap-2 text-carbon-pitch font-bold text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <span>ЗАБРАНО ЗА {formatNumber(lot.final_price ?? lot.current_price)} ₴</span>
-                  </div>
-                  <p className="text-muted-steel text-xs font-sans leading-relaxed">
-                    Цю унікальну річ уже зафіксував інший покупець. Вона більше не
-                    з'явиться в каталозі, оскільки існує в єдиному екземплярі.
-                  </p>
-                </div>
-              ) : isExpired ? (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full opacity-60 cursor-not-allowed"
-                  disabled
-                >
-                  СПУСК ЗУПИНЕНО НА ПІДЛОЗІ
-                </Button>
-              ) : (
+              {isActive ? (
                 <Button
                   variant="primary"
                   size="lg"
@@ -222,6 +220,66 @@ export const LotDetailPage: React.FC<LotDetailPageProps> = ({
                       ? "ФІКСАЦІЯ..."
                       : `ЗАБРАТИ ЗА ${formatNumber(lot.current_price)} ₴`}
                   </span>
+                </Button>
+              ) : isTaken ? (
+                <div className="p-4 bg-gallery-canvas border border-hairline-border text-xs font-mono space-y-2">
+                  <div className="flex items-center gap-2 text-carbon-pitch font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>
+                      {myClaimCode
+                        ? "ВИ УСПІШНО ЗАБРАЛИ ЕКСПОНАТ"
+                        : `ЗАБРАНО ЗА ${formatNumber(lot.final_price ?? lot.current_price)} ₴`}
+                    </span>
+                  </div>
+                  <div className="text-muted-steel text-xs font-sans leading-relaxed">
+                    {myClaimCode ? (
+                      <div>
+                        Експонат закріплено за вами. Ваш унікальний чек-код:{" "}
+                        <span className="text-carbon-pitch font-mono font-bold select-all">
+                          {myClaimCode}
+                        </span>
+                        . Ви можете перевірити статус у розділі «Пошук квитанції».
+                      </div>
+                    ) : (
+                      "Цю унікальну річ уже зафіксував інший покупець. Вона більше не з'явиться в каталозі, оскільки існує в єдиному екземплярі."
+                    )}
+                  </div>
+                </div>
+              ) : isExpired ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full opacity-60 cursor-not-allowed"
+                  disabled
+                >
+                  СПУСК ЗУПИНЕНО НА ПІДЛОЗІ
+                </Button>
+              ) : lot.status === "SCHEDULED" ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full opacity-70 cursor-not-allowed"
+                  disabled
+                >
+                  СКОРО НА СПУСКУ
+                </Button>
+              ) : lot.status === "CANCELLED" ? (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full opacity-60 cursor-not-allowed"
+                  disabled
+                >
+                  СКАСОВАНО
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full opacity-70 cursor-not-allowed"
+                  disabled
+                >
+                  ЕКСПОНАТ У РЕЗЕРВІ
                 </Button>
               )}
 

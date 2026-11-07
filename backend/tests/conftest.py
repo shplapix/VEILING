@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -26,9 +27,10 @@ _ = models
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    if "sqlite" in type(dbapi_connection).__module__:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 class FakeS3Service:
@@ -82,9 +84,16 @@ class FakeS3Service:
         file_data: bytes,
         content_type: str,
         prefix: str | None = None,
+        filename: str | None = None,
     ) -> tuple[str, str]:
         ext = self.validate_content_type(content_type)
-        key = f"{uuid.uuid4()}{ext}"
+        if filename:
+            clean_name = Path(filename).name
+            if not clean_name.lower().endswith(ext):
+                clean_name = f"{clean_name}{ext}"
+            key = clean_name
+        else:
+            key = f"{uuid.uuid4()}{ext}"
         if prefix:
             key = f"{prefix.strip('/')}/{key}"
         self.storage[key] = (file_data, content_type)
@@ -152,3 +161,11 @@ async def client(
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_redis_client() -> AsyncIterator[None]:
+    yield
+    from app.core.redis import close_redis
+
+    await close_redis()
